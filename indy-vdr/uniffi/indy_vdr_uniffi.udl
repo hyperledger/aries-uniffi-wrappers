@@ -1,0 +1,8 @@
+
+interface Request {};
+interface Ledger {
+    constructor();
+};
+interface Pool {};
+
+namespace indy_vdr_uniffi {};

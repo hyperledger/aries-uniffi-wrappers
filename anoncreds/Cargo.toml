@@ -1,0 +1,25 @@
+[package]
+name = "anoncreds-uniffi"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi/uniffi-bindgen.rs"
+
+[lib]
+name = "anoncreds_uniffi"
+path = "src/lib.rs"
+crate-type = ["staticlib"]
+
+[build-dependencies]
+uniffi = { version = "0.25", features = ["build", "cli"] }
+
+[dependencies]
+anoncreds = { git = "https://github.com/hyperledger/anoncreds-rs", tag = "v0.2.0-dev.4", features = ["logger", "zeroize", "vendored"], default-features = false }
+anoncreds-clsignatures = "0.2.2"
+env_logger = { version = "0.9" }
+serde = { version = "1.0.155", features = ["derive"] }
+serde_json = { version = "1.0.94", features = ["raw_value"] }
+thiserror = "1.0"
+uniffi = { version = "0.25", features = ["cli"] }

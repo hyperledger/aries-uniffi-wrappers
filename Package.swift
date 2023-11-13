@@ -29,7 +29,8 @@ let package = Package(
             dependencies: ["Anoncreds"]),
         .binaryTarget(
             name: "anoncreds_uniffiFFI",
-            path: "anoncreds/out/anoncreds_uniffiFFI.xcframework"),
+            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.1.0-prepare/anoncreds_uniffiFFI.xcframework.zip",
+            checksum: "fcde55bcdfa895f180066788e5b2447b1bc94a4eb56fd23fd199d0e2b9a851a5"),
         .target(
             name: "Askar",
             dependencies: ["askar_uniffiFFI"]),
@@ -38,7 +39,8 @@ let package = Package(
             dependencies: ["Askar"]),
         .binaryTarget(
             name: "askar_uniffiFFI",
-            path: "askar/out/askar_uniffiFFI.xcframework"),
+            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.1.0-prepare/askar_uniffiFFI.xcframework.zip",
+            checksum: "82e61bb8bd1c645d1c027d67ea627d92631f68d682b4deb57218e78ead78ff44"),
         .target(
             name: "IndyVdr",
             dependencies: ["indy_vdr_uniffiFFI"]),
@@ -50,6 +52,7 @@ let package = Package(
             ]),
         .binaryTarget(
             name: "indy_vdr_uniffiFFI",
-            path: "indy-vdr/out/indy_vdr_uniffiFFI.xcframework"),
+            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.1.0-prepare/indy_vdr_uniffiFFI.xcframework.zip",
+            checksum: "bf1981bb854bb565a6803f917e67bf9238ed798cecbed9ffdf247cbc118b6f55"),
     ]
 )

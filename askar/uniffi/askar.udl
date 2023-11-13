@@ -1,0 +1,24 @@
+interface AskarCrypto {
+    constructor();
+};
+interface AskarEntry {};
+interface AskarEcdhEs {
+    constructor(string alg_id, string apu, string apv);
+};
+interface AskarEcdh1PU {
+    constructor(string alg_id, string apu, string apv);
+};
+interface AskarKeyEntry {};
+interface AskarLocalKey {};
+interface AskarScan {};
+interface AskarSession {};
+interface AskarStore {};
+interface AskarStoreManager {
+    constructor();
+};
+interface EncryptedBuffer {};
+interface LocalKeyFactory {
+    constructor();
+};
+
+namespace askar_uniffi {};

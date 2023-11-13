@@ -1,0 +1,25 @@
+[package]
+name = "askar-uniffi"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi/uniffi-bindgen.rs"
+
+[lib]
+name = "askar_uniffi"
+path = "src/lib.rs"
+crate-type = ["staticlib"]
+
+[build-dependencies]
+uniffi = { version = "0.25", features = ["build", "cli", "tokio"] }
+
+[dependencies]
+aries-askar = { git = "https://github.com/hyperledger/aries-askar", tag = "v0.3.0-dev.1", features = ["logger", "sqlite"], default-features = false }
+env_logger = { version = "0.9" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tokio = { version = "1.5" }
+uniffi = { version = "0.25", features = ["cli", "tokio"] }

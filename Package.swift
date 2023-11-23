@@ -39,8 +39,8 @@ let package = Package(
             dependencies: ["Askar"]),
         .binaryTarget(
             name: "askar_uniffiFFI",
-            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.1.0-prepare/askar_uniffiFFI.xcframework.zip",
-            checksum: "82e61bb8bd1c645d1c027d67ea627d92631f68d682b4deb57218e78ead78ff44"),
+            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.1.1-binary/askar_uniffiFFI.xcframework.zip",
+            checksum: "761220bc486d14c371c84c30481c7b07b4e8dc53a0e61cdd3e67efa842bc73ab"),
         .target(
             name: "IndyVdr",
             dependencies: ["indy_vdr_uniffiFFI"]),
@@ -52,7 +52,7 @@ let package = Package(
             ]),
         .binaryTarget(
             name: "indy_vdr_uniffiFFI",
-            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.1.0-prepare/indy_vdr_uniffiFFI.xcframework.zip",
-            checksum: "bf1981bb854bb565a6803f917e67bf9238ed798cecbed9ffdf247cbc118b6f55"),
+            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.1.1-binary/indy_vdr_uniffiFFI.xcframework.zip",
+            checksum: "076821ffbeb291e2541dbe8eb6186e2583cbadd68cde144c999cf0362fe9a19c"),
     ]
 )

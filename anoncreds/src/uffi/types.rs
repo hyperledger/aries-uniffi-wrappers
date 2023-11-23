@@ -13,7 +13,7 @@ use anoncreds::types::{
     CredentialRevocationState as RustCredentialRevocationState, Presentation as RustPresentation,
     PresentationRequest as RustPresentationRequest,
     RevocationRegistryDefinition as RustRevocationRegistryDefinition,
-    RevocationRegistryDefinitionPrivate,
+    RevocationRegistryDefinitionPrivate as RustRevocationRegistryDefinitionPrivate,
 };
 use anoncreds_clsignatures::RevocationRegistryDelta as RustRevocationRegistryDelta;
 use std::collections::HashMap;
@@ -175,7 +175,7 @@ impl<'a> From<&'a CredentialRevocationConfig> for RustCredentialRevocationConfig
     fn from(revocation_config: &'a CredentialRevocationConfig) -> Self {
         RustCredentialRevocationConfig {
             reg_def: &revocation_config.reg_def.0,
-            reg_def_private: &revocation_config.reg_def_private,
+            reg_def_private: &revocation_config.reg_def_private.0,
             status_list: &revocation_config.status_list.0,
             registry_idx: revocation_config.registry_index,
         }
@@ -240,9 +240,9 @@ macro_rules! define_serializable_struct {
         impl $struct_name {
             #[uniffi::constructor]
             pub fn new(json: String) -> Result<Arc<Self>, ErrorCode> {
-                Ok(Arc::new(Self(serde_json::from_str::<
-                    $rust_struct_name,
-                >(&json)?)))
+                Ok(Arc::new(Self(serde_json::from_str::<$rust_struct_name>(
+                    &json,
+                )?)))
             }
 
             pub fn to_json(&self) -> String {
@@ -253,7 +253,10 @@ macro_rules! define_serializable_struct {
 }
 
 define_serializable_struct!(CredentialDefinitionPrivate, RustCredentialDefinitionPrivate);
-define_serializable_struct!(CredentialKeyCorrectnessProof, RustCredentialKeyCorrectnessProof);
+define_serializable_struct!(
+    CredentialKeyCorrectnessProof,
+    RustCredentialKeyCorrectnessProof
+);
 define_serializable_struct!(CredentialRequest, RustCredentialRequest);
 define_serializable_struct!(CredentialRequestMetadata, RustCredentialRequestMetadata);
 define_serializable_struct!(RevocationRegistryDelta, RustRevocationRegistryDelta);
@@ -261,3 +264,7 @@ define_serializable_struct!(CredentialRevocationState, RustCredentialRevocationS
 define_serializable_struct!(RevocationStatusList, RustRevocationStatusList);
 define_serializable_struct!(PresentationRequest, RustPresentationRequest);
 define_serializable_struct!(Presentation, RustPresentation);
+define_serializable_struct!(
+    RevocationRegistryDefinitionPrivate,
+    RustRevocationRegistryDefinitionPrivate
+);

@@ -1637,7 +1637,9 @@ public func FfiConverterTypeRevocationRegistryDefinition_lower(_ value: Revocati
     return FfiConverterTypeRevocationRegistryDefinition.lower(value)
 }
 
-public protocol RevocationRegistryDefinitionPrivateProtocol {}
+public protocol RevocationRegistryDefinitionPrivateProtocol {
+    func toJson() -> String
+}
 
 public class RevocationRegistryDefinitionPrivate: RevocationRegistryDefinitionPrivateProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer
@@ -1649,8 +1651,25 @@ public class RevocationRegistryDefinitionPrivate: RevocationRegistryDefinitionPr
         self.pointer = pointer
     }
 
+    public convenience init(json: String) throws {
+        try self.init(unsafeFromRawPointer: rustCallWithError(FfiConverterTypeErrorCode.lift) {
+            uniffi_anoncreds_uniffi_fn_constructor_revocationregistrydefinitionprivate_new(
+                FfiConverterString.lower(json), $0
+            )
+        })
+    }
+
     deinit {
         try! rustCall { uniffi_anoncreds_uniffi_fn_free_revocationregistrydefinitionprivate(pointer, $0) }
+    }
+
+    public func toJson() -> String {
+        return try! FfiConverterString.lift(
+            try!
+                rustCall {
+                    uniffi_anoncreds_uniffi_fn_method_revocationregistrydefinitionprivate_to_json(self.pointer, $0)
+                }
+        )
     }
 }
 
@@ -2974,6 +2993,9 @@ private var initializationResult: InitializationResult {
     if uniffi_anoncreds_uniffi_checksum_method_revocationregistrydefinition_to_json() != 31175 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_anoncreds_uniffi_checksum_method_revocationregistrydefinitionprivate_to_json() != 37971 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_anoncreds_uniffi_checksum_method_revocationregistrydelta_to_json() != 15053 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3038,6 +3060,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_anoncreds_uniffi_checksum_constructor_revocationregistrydefinition_new() != 3510 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_anoncreds_uniffi_checksum_constructor_revocationregistrydefinitionprivate_new() != 53969 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_anoncreds_uniffi_checksum_constructor_revocationregistrydelta_new() != 59759 {

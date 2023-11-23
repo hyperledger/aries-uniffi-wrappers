@@ -2,7 +2,8 @@ use super::error::ErrorCode;
 use super::types::{
     Credential, CredentialDefinition, CredentialDefinitionPrivate, CredentialDefinitionTuple,
     CredentialKeyCorrectnessProof, CredentialOffer, CredentialRequest, CredentialRevocationConfig,
-    RevocationRegistryDefinition, RevocationRegistryDefinitionTuple, RevocationStatusList, Schema,
+    RevocationRegistryDefinition, RevocationRegistryDefinitionPrivate,
+    RevocationRegistryDefinitionTuple, RevocationStatusList, Schema,
 };
 use anoncreds::data_types::{cred_def::SignatureType, rev_reg_def::RegistryType};
 use anoncreds::issuer::{
@@ -11,9 +12,7 @@ use anoncreds::issuer::{
     update_revocation_status_list,
 };
 use anoncreds::tails::TailsFileWriter;
-use anoncreds::types::{
-    CredentialDefinitionConfig, MakeCredentialValues, RevocationRegistryDefinitionPrivate,
-};
+use anoncreds::types::{CredentialDefinitionConfig, MakeCredentialValues};
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -112,7 +111,7 @@ impl Issuer {
         )?;
         Ok(RevocationRegistryDefinitionTuple {
             rev_reg_def: Arc::new(RevocationRegistryDefinition(rev_reg_def)),
-            rev_reg_def_priv: Arc::new(rev_reg_def_private),
+            rev_reg_def_priv: Arc::new(RevocationRegistryDefinitionPrivate(rev_reg_def_private)),
         })
     }
 
@@ -131,7 +130,7 @@ impl Issuer {
                 .try_into()
                 .map_err(|err| anoncreds::Error::from(err))?,
             &rev_reg_def.0,
-            &rev_reg_priv,
+            &rev_reg_priv.0,
             issuance_by_default,
             timestamp,
         )?;
@@ -153,7 +152,7 @@ impl Issuer {
         let rev_status_list = update_revocation_status_list(
             &cred_def.0,
             &rev_reg_def.0,
-            &rev_reg_priv,
+            &rev_reg_priv.0,
             &current_list.0,
             issued,
             revoked,

@@ -29,8 +29,8 @@ let package = Package(
             dependencies: ["Anoncreds"]),
         .binaryTarget(
             name: "anoncreds_uniffiFFI",
-            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.1.0-prepare/anoncreds_uniffiFFI.xcframework.zip",
-            checksum: "fcde55bcdfa895f180066788e5b2447b1bc94a4eb56fd23fd199d0e2b9a851a5"),
+            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.1.1-binary/anoncreds_uniffiFFI.xcframework.zip",
+            checksum: "41f8d517d89f57ca28598d936b8743c8e378ef929a58ac00bdbf77dffe1e19b7"),
         .target(
             name: "Askar",
             dependencies: ["askar_uniffiFFI"]),

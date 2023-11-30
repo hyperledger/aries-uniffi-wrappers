@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSetTree
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import java.util.*
 
 plugins {
     kotlin("multiplatform") version "1.9.20"
@@ -52,54 +53,54 @@ tasks.withType<ProcessResources>{
 }
 
 // Stub secrets to let the project sync and build without the publication values set up
-//ext["githubUsername"] = null
-//ext["githubToken"] = null
-//ext["anoncredsVersion"] = "0.1.0-dev.18"
-//ext["wrapperVersion"] = "7"
-//
-//val secretPropsFile = project.rootProject.file("local.properties")
-//if(secretPropsFile.exists()) {
-//    secretPropsFile.reader().use {
-//        Properties().apply {
-//            load(it)
-//        }
-//    }.onEach{ (name, value) ->
-//        ext[name.toString()] = value
-//    }
-//} else {
-//    ext["githubUsername"] = System.getenv("GITHUB_ACTOR")
-//    ext["githubToken"] = System.getenv("GITHUB_TOKEN")
-//}
+ext["githubUsername"] = null
+ext["githubToken"] = null
+ext["anoncredsVersion"] = "0.1.0"
+ext["wrapperVersion"] = "1"
 
-//fun getExtraString(name: String) = ext[name]?.toString()
-//
-//group = "anoncreds_uniffi"
-//version = "${getExtraString("anoncredsVersion")}-wrapper.${getExtraString("wrapperVersion")}"
-//
-//publishing{
-//    repositories{
-//        maven{
-//            name = "github"
-//            setUrl("https://maven.pkg.github.com/indicio-tech/anoncreds-rs")
-//            credentials {
-//                username = getExtraString("githubUsername")
-//                password = getExtraString("githubToken")
-//            }
-//        }
-//    }
-//
-//    publications.withType<MavenPublication> {
-//        pom {
-//            name.set("Anoncreds-rs Kotlin")
-//            description.set("Kotlin MPP wrapper around anoncreds-rs")
-//            url.set("https://github.com/indicio-tech/anoncreds-rs")
-//
-//            scm{
-//                url.set("https://github.com/indicio-tech/anoncreds-rs")
-//            }
-//        }
-//    }
-//}
+val secretPropsFile = project.rootProject.file("local.properties")
+if(secretPropsFile.exists()) {
+    secretPropsFile.reader().use {
+        Properties().apply {
+            load(it)
+        }
+    }.onEach{ (name, value) ->
+        ext[name.toString()] = value
+    }
+} else {
+    ext["githubUsername"] = System.getenv("GITHUB_ACTOR")
+    ext["githubToken"] = System.getenv("GITHUB_TOKEN")
+}
+
+fun getExtraString(name: String) = ext[name]?.toString()
+
+group = "org.hyperledger"
+version = "${getExtraString("anoncredsVersion")}-wrapper.${getExtraString("wrapperVersion")}"
+
+publishing{
+    repositories{
+        maven{
+            name = "github"
+            setUrl("https://maven.pkg.github.com/hyperledger/aries-uniffi-wrappers")
+            credentials {
+                username = getExtraString("githubUsername")
+                password = getExtraString("githubToken")
+            }
+        }
+    }
+
+    publications.withType<MavenPublication> {
+        pom {
+            name.set("Anoncreds Uniffi Kotlin")
+            description.set("Kotlin MPP wrapper around anoncreds uniffi")
+            url.set("https://github.com/hyperledger/aries-uniffi-wrappers")
+
+            scm{
+                url.set("https://github.com/hyperledger/aries-uniffi-wrappers")
+            }
+        }
+    }
+}
 
 private enum class PlatformType {
     APPLE,
@@ -134,6 +135,7 @@ kotlin {
 
 
     androidTarget{
+        publishLibraryVariants("release")
         compilations.all{
             kotlinOptions.jvmTarget = "1.8"
         }

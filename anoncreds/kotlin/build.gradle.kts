@@ -231,7 +231,7 @@ kotlin {
 
 
 android{
-    sourceSets["main"].jniLibs.srcDir(uniffiBindings.resolve("jniLibs"))
+    sourceSets["main"].jniLibs.srcDir(jniLibs)
     namespace = "anoncreds_uniffi"
     compileSdk = 33
 

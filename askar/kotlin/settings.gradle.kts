@@ -1,4 +1,4 @@
-rootProject.name = "anoncreds_uniffi"
+rootProject.name = "askar_uniffi"
 
 pluginManagement {
     repositories {

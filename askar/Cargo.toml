@@ -10,7 +10,7 @@ path = "uniffi/uniffi-bindgen.rs"
 [lib]
 name = "askar_uniffi"
 path = "src/lib.rs"
-crate-type = ["staticlib"]
+crate-type = ["staticlib", "cdylib"]
 
 [build-dependencies]
 uniffi = { version = "0.25", features = ["build", "cli", "tokio"] }

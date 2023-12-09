@@ -33,8 +33,8 @@ dependencies {
     testImplementation("org.testng:testng:7.1.0")
 }
 
-
-val uniffiBindings = file("../out/kmpp-uniffi")
+val vdrDir = file("../../indy-vdr")
+val uniffiBindings = vdrDir.resolve("out/kmpp-uniffi")
 val jniLibs = uniffiBindings.resolve("jniLibs")
 
 val processBinaries = tasks.register("processBinaries", Copy::class) {
@@ -55,7 +55,7 @@ tasks.withType<ProcessResources>{
 // Stub secrets to let the project sync and build without the publication values set up
 ext["githubUsername"] = null
 ext["githubToken"] = null
-ext["askarVersion"] = "0.1.0"
+ext["indyVdrVersion"] = "0.1.0"
 ext["wrapperVersion"] = "1"
 
 val secretPropsFile = project.rootProject.file("local.properties")
@@ -75,7 +75,7 @@ if(secretPropsFile.exists()) {
 fun getExtraString(name: String) = ext[name]?.toString()
 
 group = "org.hyperledger"
-version = "${getExtraString("askarVersion")}-wrapper.${getExtraString("wrapperVersion")}"
+version = "${getExtraString("indyVdrVersion")}-wrapper.${getExtraString("wrapperVersion")}"
 
 publishing{
     repositories{
@@ -91,8 +91,8 @@ publishing{
 
     publications.withType<MavenPublication> {
         pom {
-            name.set("Askar Uniffi Kotlin")
-            description.set("Kotlin MPP wrapper around aries askar uniffi")
+            name.set("Indy VDR Uniffi Kotlin")
+            description.set("Kotlin MPP wrapper around indy vdr uniffi")
             url.set("https://github.com/hyperledger/aries-uniffi-wrappers")
 
             scm{
@@ -114,21 +114,21 @@ kotlin {
     fun addLibs(libDirectory: String, target: KotlinNativeTarget) {
         target.compilations.getByName("main") {
             val uniffi by cinterops.creating {
-                val headerDir = uniffiBindings.resolve("nativeInterop/cinterop/headers/askar_uniffi")
+                val headerDir = uniffiBindings.resolve("nativeInterop/cinterop/headers/indy_vdr_uniffi")
                 this.includeDirs(headerDir)
-                packageName("askar_uniffi.cinterop")
+                packageName("indy_vdr_uniffi.cinterop")
                 extraOpts("-libraryPath", libDirectory)
             }
         }
 
         target.binaries.all {
-            linkerOpts("-L${libDirectory}", "-laskar_uniffi")
+            linkerOpts("-L${libDirectory}", "-lindy_vdr_uniffi")
             linkerOpts("-Wl,-framework,Security")
         }
 
         target.binaries{
             sharedLib{
-                baseName = "askar_unifi"
+                baseName = "indy_vdr_uniffi"
             }
         }
     }
@@ -157,34 +157,34 @@ kotlin {
     }
 
     macosX64{
-        val libDirectory = "${projectDir}/../target/x86_64-apple-darwin/release"
+        val libDirectory = "${vdrDir}/target/x86_64-apple-darwin/release"
         addLibs(libDirectory, this)
     }
 
     macosArm64{
-        val libDirectory = "${projectDir}/../target/aarch64-apple-darwin/release"
+        val libDirectory = "${vdrDir}/target/aarch64-apple-darwin/release"
         addLibs(libDirectory, this)
     }
 
     iosX64 {
-        val libDirectory = "${projectDir}/../target/x86_64-apple-ios/release"
+        val libDirectory = "${vdrDir}/target/x86_64-apple-ios/release"
         addLibs(libDirectory, this)
     }
 
     iosSimulatorArm64 {
-        val libDirectory = "${projectDir}/../target/aarch64-apple-ios-sim/release"
+        val libDirectory = "${vdrDir}/target/aarch64-apple-ios-sim/release"
         addLibs(libDirectory, this)
     }
 
     iosArm64 {
-        val libDirectory = "${projectDir}/../target/aarch64-apple-ios/release"
+        val libDirectory = "${vdrDir}/target/aarch64-apple-ios/release"
         addLibs(libDirectory, this)
     }
     
     sourceSets {
         val commonMain by getting {
             val commonDir = uniffiBindings.resolve("commonMain").resolve("kotlin")
-            val file = commonDir.resolve("askar_uniffi").resolve("askar_uniffi.common.kt")
+            val file = commonDir.resolve("indy_vdr_uniffi").resolve("indy_vdr_uniffi.common.kt")
             val find = Regex("\\t|(?:\\s{4})class ([a-zA-Z]{2,50})\\(\\n.{0,50}\\n.{0,20}: ErrorCode\\(\\) \\{(?:.|\\n){0,100}?(?:\\t|(?:\\s{4}))\\}")
             val contents = file.readText().replace(find){
                 "class ${it.groupValues[1]}(override val message: kotlin.String): ErrorCode()"
@@ -201,6 +201,7 @@ kotlin {
         val commonTest by getting {
             dependencies{
                 implementation(kotlin("test"))
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
             }
         }
 
@@ -234,8 +235,10 @@ kotlin {
 android{
     sourceSets["main"].jniLibs.srcDir(jniLibs)
     sourceSets["androidTest"].manifest.srcFile("src/androidTest/AndroidManifest.xml")
-    namespace = "askar_uniffi"
+    namespace = "indy_vdr_uniffi"
     compileSdk = 33
+
+    ndkVersion = "25.1.8937393"
 
     defaultConfig{
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -245,7 +248,6 @@ android{
         testOptions {
             execution = "ANDROIDX_TEST_ORCHESTRATOR"
         }
-
     }
 
     dependencies {

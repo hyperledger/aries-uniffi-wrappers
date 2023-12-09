@@ -1,6 +1,8 @@
 package org.hyperledger.anoncreds_uniffi
 
 import anoncreds_uniffi.CredentialRevocationConfig
+import anoncreds_uniffi.Disposable
+import anoncreds_uniffi.FFIObject
 import anoncreds_uniffi.Issuer
 import anoncreds_uniffi.PresentationRequest
 import anoncreds_uniffi.Prover
@@ -9,13 +11,33 @@ import anoncreds_uniffi.Schema
 import anoncreds_uniffi.Verifier
 import anoncreds_uniffi.createLinkSecret
 import kotlinx.serialization.json.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
 class TestAnoncreds {
-    val verifier = Verifier()
-    val issuer = Issuer()
-    val prover = Prover()
+    private var verifier: Verifier? = null
+    private var issuer: Issuer? = null
+    private var prover: Prover? = null
+
+    private var ffiObjects: MutableList<Disposable>? = null
+
+    @BeforeTest
+    fun beforeEach(){
+        verifier = Verifier()
+        issuer = Issuer()
+        prover = Prover()
+
+        ffiObjects = mutableListOf(verifier!!, issuer!!, prover!!)
+    }
+
+    @AfterTest
+    fun afterEach(){
+        ffiObjects?.forEach {
+            it.destroy()
+        }
+    }
 
     @Test
     fun testAnoncredsNonce() {
@@ -24,7 +46,7 @@ class TestAnoncreds {
         var low: Int? = null
         var high: Int? = null
         for(i in 0 .. 100){
-            val nonce = verifier.generateNonce()
+            val nonce = verifier!!.generateNonce()
             val len = nonce.length
             if(low === null || high === null){
                 low = len
@@ -45,7 +67,7 @@ class TestAnoncreds {
     fun createAndVerifyPresentation() {
         println("CREATE AND VERIFY PRESENTATION")
 
-        val nonce = verifier.generateNonce()
+        val nonce = verifier!!.generateNonce()
         println("\tGENERATE NONCE: $nonce")
 
         val prJson = buildJsonObject {
@@ -86,6 +108,7 @@ class TestAnoncreds {
         println("\tBUILDING PRESENTATION REQUEST FROM JSON")
         val presentationRequest = PresentationRequest(prJson.toString())
         println("\t\tPRESENTATION REQUEST: ${presentationRequest.toJson()}")
+        ffiObjects!!.add(presentationRequest)
 
         println("\tBUILDING SCHEMA FROM JSON")
         val schema = Schema(buildJsonObject {
@@ -100,9 +123,10 @@ class TestAnoncreds {
             }
         }.toString())
         println("\t\tSCHEMA ID: ${schema.schemaId()}")
+        ffiObjects!!.add(schema)
 
         println("\tCREATING CREDENTIAL DEFINITION")
-        val credDefData = issuer.createCredentialDefinition(
+        val credDefData = issuer!!.createCredentialDefinition(
             schema.schemaId(),
             schema,
             "TAG",
@@ -113,11 +137,14 @@ class TestAnoncreds {
         val credentialDefinition = credDefData.credDef
         val keyCorrectnessProof = credDefData.keyCorrectnessProof
         val credentialDefinitionPrivate = credDefData.credDefPriv
+        ffiObjects!!.add(credentialDefinition)
+        ffiObjects!!.add(keyCorrectnessProof)
+        ffiObjects!!.add(credentialDefinitionPrivate)
         println("\t\tCREDENTIAL DEFINITION SCHEMA ID: ${credentialDefinition.schemaId()}")
         println("\t\tKEY CORRECTNESS PROOF: ${keyCorrectnessProof.toJson()}")
         println("\t\tCREDENTIAL DEFINITION PRIVATE: ${credentialDefinitionPrivate.toJson()}")
         println("\tCREATING REVOCATION REGISTRY DEFINITION")
-        val revRegData = issuer.createRevocationRegistryDef(
+        val revRegData = issuer!!.createRevocationRegistryDef(
             credentialDefinition,
             "mock:uri",
             "some_tag",
@@ -127,6 +154,8 @@ class TestAnoncreds {
 
         val revocationRegistryDefinition = revRegData.revRegDef
         val revocationRegistryDefinitionPrivate = revRegData.revRegDefPriv
+        ffiObjects!!.add(revocationRegistryDefinition)
+        ffiObjects!!.add(revocationRegistryDefinitionPrivate)
         println("\t\tREVOCATION REGISTRY DEFINITION: ${revocationRegistryDefinition.toJson()}")
         println("\t\tREVOCATION REGISTRY DEFINITION PRIVATE: ${revocationRegistryDefinitionPrivate.toJson()}")
 
@@ -136,7 +165,7 @@ class TestAnoncreds {
 
         println("\tCREATING REVOCATION STATUS LIST")
         val timeCreateRevStatusList = 12UL
-        val revocationStatusList = issuer.createRevocationStatusList(
+        val revocationStatusList = issuer!!.createRevocationStatusList(
             credentialDefinition,
             revocationRegistryDefinition.revRegId(),
             revocationRegistryDefinition,
@@ -144,14 +173,16 @@ class TestAnoncreds {
             timeCreateRevStatusList,
             true,
         )
+        ffiObjects!!.add(revocationStatusList)
         println("\t\tREVOCATION STATUS LIST: ${revocationStatusList.toJson()}")
 
         println("\tCREATING CREDENTIAL OFFER")
-        val credentialOffer = issuer.createCredentialOffer(
+        val credentialOffer = issuer!!.createCredentialOffer(
             schema.schemaId(),
             credentialDefinition.credDefId(),
             keyCorrectnessProof
         )
+        ffiObjects!!.add(credentialOffer)
         println("\t\tCREDENTIAL OFFER: ${credentialOffer.toJson()}")
 
         println("\tCREATING LINK SECRET")
@@ -160,7 +191,7 @@ class TestAnoncreds {
         println("\t\tLINK SECRET: $linkSecret")
 
         println("\tCREATING CREDENTIAL REQUEST")
-        val credReqData = prover.createCredentialRequest(
+        val credReqData = prover!!.createCredentialRequest(
             "entropy",
             null,
             credentialDefinition,
@@ -171,11 +202,19 @@ class TestAnoncreds {
 
         val credentialRequest = credReqData.request
         val credentialRequestMetadata = credReqData.metadata
+        ffiObjects!!.add(credentialRequest)
+        ffiObjects!!.add(credentialRequestMetadata)
         println("\t\tCREDENTIAL REQUEST: ${credentialRequest.toJson()}")
         println("\t\tCREDENTIAL REQUEST METADATA: ${credentialRequestMetadata.toJson()}")
 
         println("\tCREATING CREDENTIAL")
-        var credential = issuer.createCredential(
+        val credentialRevocationConfig = CredentialRevocationConfig(
+            revocationRegistryDefinition,
+            revocationRegistryDefinitionPrivate,
+            revocationStatusList,
+            9U
+        )
+        var credential = issuer!!.createCredential(
             credentialDefinition,
             credentialDefinitionPrivate,
             credentialOffer,
@@ -187,24 +226,21 @@ class TestAnoncreds {
                 "sex" to "male"
             ),
             null,
-            CredentialRevocationConfig(
-                revocationRegistryDefinition,
-                revocationRegistryDefinitionPrivate,
-                revocationStatusList,
-                9U
-            )
+            credentialRevocationConfig
         )
-
+        ffiObjects!!.add(credential)
+        ffiObjects!!.add(credentialRevocationConfig)
         println("\t\tCREDENTIAL: ${credential.toJson()}")
 
         println("\tPROCESSING CREDENTIAL")
-        credential = prover.processCredential(
+        credential = prover!!.processCredential(
             credential,
             credentialRequestMetadata,
             linkSecret,
             credentialDefinition,
             revocationRegistryDefinition
         )
+        ffiObjects!!.add(credential)
         println("\t\tPROCESSED CREDENTIAL: ${credential.toJson()}")
 
         println("\tGETTING REVOCATION REGISTRY INDEX")
@@ -212,7 +248,7 @@ class TestAnoncreds {
         println("\t\tREVOCATION REGISTRY INDEX: $revocationRegistryIndex")
 
         println("\tCREATING REVOCATION STATE")
-        val revocationState = prover.createOrUpdateRevocationState(
+        val revocationState = prover!!.createOrUpdateRevocationState(
             revocationRegistryDefinition,
             revocationStatusList,
             revocationRegistryIndex!!,
@@ -220,6 +256,7 @@ class TestAnoncreds {
             null,
             null
         )
+        ffiObjects!!.add(revocationState)
         println("\t\tREVOCATION STATE: ${revocationState.toJson()}")
 
         println("\tCREATING PRESENTATION")
@@ -235,7 +272,8 @@ class TestAnoncreds {
             ),
             listOf("predicate1_referent")
         )
-        val presentation = prover.createPresentation(
+        ffiObjects!!.add(present)
+        val presentation = prover!!.createPresentation(
             presentationRequest,
             listOf(present),
             mapOf("attr3_referent" to "8-800-300"),
@@ -243,10 +281,11 @@ class TestAnoncreds {
             mapOf(schema.schemaId() to schema),
             mapOf(credentialDefinition.credDefId() to credentialDefinition)
         )
+        ffiObjects!!.add(presentation)
         println("\t\tPRESENTATION: ${presentation.toJson()}")
 
         println("\tVERIFYING PRESENTATION")
-        val verify = verifier.verifyPresentation(
+        val verify = verifier!!.verifyPresentation(
             presentation,
             presentationRequest,
             mapOf(schema.schemaId() to schema),

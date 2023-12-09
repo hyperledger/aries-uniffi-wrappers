@@ -5,6 +5,7 @@ import askar_uniffi.AskarKeyAlg
 import askar_uniffi.AskarSession
 import askar_uniffi.AskarStore
 import askar_uniffi.AskarStoreManager
+import askar_uniffi.Disposable
 import askar_uniffi.LocalKeyFactory
 import kotlinx.serialization.json.*
 import kotlinx.coroutines.runBlocking
@@ -19,8 +20,8 @@ class TestAskar {
 
     var store: AskarStore? = null
     var session: AskarSession? = null
-    val storeManager = AskarStoreManager()
-    val keyFactory = LocalKeyFactory()
+    var storeManager: AskarStoreManager? = null
+    var keyFactory: LocalKeyFactory? = null
     val testEntry = buildMap {
         put("category", "test category")
         put("name", "test name")
@@ -29,11 +30,20 @@ class TestAskar {
     }
     val uriSchema = "sqlite://${getDBDirectory()}"
 
+    var ffiObjects: MutableList<Disposable>? = null
+
     @BeforeTest
     fun beforeEach(){
         runBlocking{
-            val key = storeManager.generateRawStoreKey(null)
-            store = storeManager.provision("${uriSchema}test.db", "raw", key, null, true)
+            storeManager = AskarStoreManager()
+            keyFactory = LocalKeyFactory()
+
+            val key = storeManager!!.generateRawStoreKey(null)
+            store = storeManager!!.provision("${uriSchema}test.db", "raw", key, null, true)
+
+            ffiObjects?.add(store!!)
+            ffiObjects?.add(storeManager!!)
+            ffiObjects?.add(keyFactory!!)
         }
     }
 
@@ -49,12 +59,15 @@ class TestAskar {
                     println(e.message)
                 }
                 try{
-                    storeManager.remove("${uriSchema}test.db")
+                    storeManager?.remove("${uriSchema}test.db")
                 }catch(e: Throwable){
                     println("Failed to delete store db")
                     println(e.message)
                 }
             }
+        }
+        ffiObjects?.forEach{
+            it.destroy()
         }
     }
 
@@ -63,6 +76,7 @@ class TestAskar {
     fun testStoreClose() {
         runBlocking {
             session = store?.session(null)
+            ffiObjects?.add(session!!)
             val count = session?.count("test", null)
             assertEquals(0, count)
         }
@@ -72,6 +86,7 @@ class TestAskar {
     fun testInsertUpdate(){
         runBlocking {
             session = store?.session(null)
+            ffiObjects?.add(session!!)
             session?.update(
                 AskarEntryOperation.INSERT,
                 testEntry["category"]!!,
@@ -92,6 +107,7 @@ class TestAskar {
                 testEntry["name"]!!,
                 false
             )?: throw Error("Entry not found")
+            ffiObjects?.add(found)
 
             assertEquals(testEntry["category"], found.category())
             assertEquals(testEntry["name"], found.name())
@@ -106,6 +122,9 @@ class TestAskar {
                 null,
                 false
             )
+            all?.forEach{
+                ffiObjects?.add(it)
+            }
             assertEquals(1, all?.size)
 
             val first = all?.get(0)
@@ -129,7 +148,7 @@ class TestAskar {
                 newEntry["name"]!!,
                 false
             )?: throw Error("Entry not found")
-
+            ffiObjects?.add(found)
             assertEquals(newEntry["value"], found.value().decodeToString())
             assertEquals("tagval", found.tags()["upd"])
 
@@ -147,6 +166,9 @@ class TestAskar {
                 testEntry["name"]!!,
                 false
             )
+            if (empty != null) {
+                ffiObjects?.add(empty)
+            }
 
             assertNull(empty)
         }
@@ -156,6 +178,7 @@ class TestAskar {
     fun testScan(){
         runBlocking {
             session = store?.session(null)
+            ffiObjects?.add(session!!)
             session?.update(
                 AskarEntryOperation.INSERT,
                 testEntry["category"]!!,
@@ -172,8 +195,12 @@ class TestAskar {
                 null,
                 null
             )
+            ffiObjects?.add(scan!!)
 
             val rows = scan?.fetchAll()
+            rows?.forEach{
+                ffiObjects?.add(it)
+            }
 
             assertEquals(1, rows?.size)
             val first = rows?.get(0)
@@ -186,16 +213,20 @@ class TestAskar {
     fun testKeyStore(){
         runBlocking {
             session = store?.session(null)
-            val keypair = keyFactory.generate(AskarKeyAlg.ED25519, false)
+            ffiObjects?.add(session!!)
+            val keypair = keyFactory!!.generate(AskarKeyAlg.ED25519, false)
+            ffiObjects?.add(keypair)
             val keyName = "test_key"
             session?.insertKey(keyName, keypair, "metadata", "{\"a\": \"b\"}", null)
 
             var key = session?.fetchKey(keyName, false)
+            ffiObjects?.add(key!!)
             assertEquals(keyName, key?.name())
             assertEquals("b", key?.tags()?.get("a"))
 
             session?.updateKey(keyName, "new metadata", "{\"a\": \"c\"}", null)
             key = session?.fetchKey(keyName, false)
+            ffiObjects?.add(key!!)
             assertEquals(keyName, key?.name())
             assertEquals("c", key?.tags()?.get("a"))
 
@@ -209,6 +240,9 @@ class TestAskar {
                 -1,
                 false
             )
+            keylist?.forEach {
+                ffiObjects?.add(it)
+            }
             assertEquals(1, keylist?.size)
             assertEquals(keyName, keylist?.get(0)?.name())
         }

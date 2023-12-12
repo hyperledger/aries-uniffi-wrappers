@@ -15,17 +15,12 @@ import kotlin.test.BeforeTest
 
 class TestVDR {
 
-    var ffiObjects:MutableList<Disposable>? = null
-
-    @BeforeTest
-    fun beforeEach(){
-        ffiObjects = mutableListOf()
-    }
+    private val ffiObjects:MutableList<Disposable> = mutableListOf()
 
     @AfterTest
     fun afterEach(){
-        ffiObjects?.forEach{
-            it.destroy()
+        ffiObjects.forEach { disposable ->
+            disposable.destroy()
         }
     }
 
@@ -34,12 +29,12 @@ class TestVDR {
         runBlocking{
             println("Opening pool...")
             val pool = openPool(null, GenesisFile, null)
-            ffiObjects?.add(pool)
+            ffiObjects.add(pool)
 
             println("\tPool Status: ${pool.getStatus()}")
 
             val ledger = Ledger()
-            ffiObjects?.add(ledger)
+            ffiObjects.add(ledger)
 
             println("Creating request body...")
             val testReq = """{
@@ -49,20 +44,20 @@ class TestVDR {
                 "identifier": "LibindyDid111111111111"
             }"""
             var req = ledger.buildCustomRequest(testReq)
-            ffiObjects?.add(req)
+            ffiObjects.add(req)
             println("\tRequest body: ${req.body()}")
             println("\tRequest signature input: ${req.signatureInput()}")
 
             println("Submitting get txn agreement request...")
             req = ledger.buildGetTxnAuthorAgreementRequest(null, null)
-            ffiObjects?.add(req)
+            ffiObjects.add(req)
 
-            var poolResponse = pool.submitRequest(req)
+            val poolResponse = pool.submitRequest(req)
             println("\tPool response: $poolResponse")
 
             println("Submitting get acceptance mechanism request...")
             req = ledger.buildGetAcceptanceMechanismsRequest(null, null, null)
-            ffiObjects?.add(req)
+            ffiObjects.add(req)
             println("\tPool response: ${pool.submitRequest(req)}")
 
 
@@ -81,7 +76,7 @@ class TestVDR {
             println("\tTAA acceptance request: ${req.use{it.body()}}")
 
             req = ledger.buildGetTxnRequest(null, LedgerType.DOMAIN, 1)
-            ffiObjects?.add(req)
+            ffiObjects.add(req)
             println("Pool response: ${pool.submitRequest(req)}")
 
             req = ledger.buildGetSchemaRequest(null, "6qnvgJtqwK44D8LFYnV5Yf:2:relationship.dflow:1.0.0")

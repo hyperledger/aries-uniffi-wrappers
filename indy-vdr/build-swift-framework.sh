@@ -15,7 +15,7 @@ XC_FRAMEWORK_NAME="$FRAMEWORK_LIBRARY_NAME.xcframework"
 HEADER_NAME="${NAME}FFI.h"
 OUT_PATH="out"
 MIN_IOS_VERSION="15.0"
-WRAPPER_PATH="../Sources/IndyVdr"
+WRAPPER_PATH="../swift/Sources/IndyVdr"
 
 AARCH64_APPLE_IOS_PATH="./target/aarch64-apple-ios/release"
 AARCH64_APPLE_IOS_SIM_PATH="./target/aarch64-apple-ios-sim/release"

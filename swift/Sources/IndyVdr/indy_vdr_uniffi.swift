@@ -1382,7 +1382,7 @@ private struct FfiConverterDictionaryStringFloat: FfiConverterRustBuffer {
 private let UNIFFI_RUST_FUTURE_POLL_READY: Int8 = 0
 private let UNIFFI_RUST_FUTURE_POLL_MAYBE_READY: Int8 = 1
 
-internal func uniffiRustCallAsync<F, T>(
+private func uniffiRustCallAsync<F, T>(
     rustFutureFunc: () -> UnsafeMutableRawPointer,
     pollFunc: (UnsafeMutableRawPointer, UnsafeMutableRawPointer) -> Void,
     completeFunc: (UnsafeMutableRawPointer, UnsafeMutablePointer<RustCallStatus>) -> F,
@@ -1418,7 +1418,7 @@ private func uniffiFutureContinuationCallback(ptr: UnsafeMutableRawPointer, poll
 
 // Wraps UnsafeContinuation in a class so that we can use reference counting when passing it across
 // the FFI
-class ContinuationHolder {
+private class ContinuationHolder {
     let continuation: UnsafeContinuation<Int8, Never>
 
     init(_ continuation: UnsafeContinuation<Int8, Never>) {

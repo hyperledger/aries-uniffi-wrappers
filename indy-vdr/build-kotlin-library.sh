@@ -12,7 +12,7 @@ OUT_PATH="out/kmpp-uniffi"
 WRAPPER_PATH="../Sources/IndyVdr"
 AARCH64_APPLE_DARWIN_PATH="./target/aarch64-apple-darwin/release"
 X86_64_APPLE_DARWIN_PATH="./target/x86_64-apple-darwin/release"
-LIBCXX_SHARED_PATH="kotlin/libc++_shared"
+LIBCXX_SHARED_PATH="../kotlin/indy-vdr/libc++_shared"
 
 apple_targets=("aarch64-apple-ios" "aarch64-apple-ios-sim" "x86_64-apple-ios" "aarch64-apple-darwin" "x86_64-apple-darwin")
 

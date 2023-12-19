@@ -43,7 +43,7 @@ val processBinaries = tasks.register("processBinaries", Copy::class) {
         .resolve("jvm")
         .resolve("main")
 
-    from(uniffiBindings.resolve("macos-native"))
+    from(uniffiBindings.resolve("macos-native").resolve("dynamic"))
     include("*.dylib")
     into(directory)
 }
@@ -157,12 +157,12 @@ kotlin {
     }
 
     macosX64{
-        val libDirectory = "${askarDir}/target/x86_64-apple-darwin/release"
+        val libDirectory = "${uniffiBindings}/macos-native/static"
         addLibs(libDirectory, this)
     }
 
     macosArm64{
-        val libDirectory = "${askarDir}/target/aarch64-apple-darwin/release"
+        val libDirectory = "${uniffiBindings}/macos-native/static"
         addLibs(libDirectory, this)
     }
 

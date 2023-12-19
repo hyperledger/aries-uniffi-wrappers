@@ -26,11 +26,19 @@ for target in "${apple_targets[@]}"; do
   cargo build --release --target $target
 done
 
-# Merge libraries with lipo
-mkdir -p $OUT_PATH/macos-native/
+# Merge mac libraries with lipo
+mkdir -p $OUT_PATH/macos-native/static
+mkdir -p $OUT_PATH/macos-native/dynamic
+
+# dylib for JVM
 lipo -create $AARCH64_APPLE_DARWIN_PATH/lib$NAME.dylib \
              $X86_64_APPLE_DARWIN_PATH/lib$NAME.dylib \
-     -output $OUT_PATH/macos-native/lib$NAME.dylib
+     -output $OUT_PATH/macos-native/dynamic/lib$NAME.dylib
+
+# .a for Native
+lipo -create $AARCH64_APPLE_DARWIN_PATH/lib$NAME.a \
+             $X86_64_APPLE_DARWIN_PATH/lib$NAME.a \
+     -output $OUT_PATH/macos-native/static/lib$NAME.a
 
 cargo install cross --git https://github.com/cross-rs/cross
 

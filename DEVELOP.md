@@ -24,7 +24,7 @@ Zip the xcframework to a zip file using `zip -rq anoncreds/out/anoncreds_uniffiF
 
 ### Build
 
-Create Kotlin bindings by running `build-kotlin-wrapper.sh`. This will create libraries and Kotlin bindings in `out/kmpp-uniffi` directory.
+Create Kotlin bindings by running `build-kotlin-libraries.sh`. This will create libraries and Kotlin bindings in `out/kmpp-uniffi` directory.
 
 ### Test
 

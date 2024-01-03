@@ -44,7 +44,6 @@ cargo install cross --git https://github.com/cross-rs/cross
 # Build for android targets
 for target in "${android_targets[@]}"; do
   echo "Building for $target..."
-  rustup toolchain install 1.65.0 --target $target
   cross build --release --target $target
 done
 

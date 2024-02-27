@@ -3,7 +3,7 @@ use super::requests::Request;
 use super::POOL_CONFIG;
 use indy_vdr::common::error::VdrResult;
 use indy_vdr::pool::{
-    PoolBuilder, PoolRunner, PoolTransactions, RequestMethod, RequestResult, RequestResultMeta,
+    PoolBuilder, PoolRunner, PoolTransactions, RequestMethod, RequestResult, TimingResult,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -33,7 +33,8 @@ fn open_pool(
 
     let builder = {
         let gcfg = read_lock!(POOL_CONFIG)?;
-        PoolBuilder::new(gcfg.clone(), txns.clone())
+        PoolBuilder::from(gcfg.clone())
+            .transactions(txns)?
             .node_weights(node_weights)
     };
     let pool = builder.into_runner()?;
@@ -43,10 +44,10 @@ fn open_pool(
 }
 
 fn handle_request_result(
-    result: VdrResult<(RequestResult<String>, RequestResultMeta)>,
+    result: VdrResult<(RequestResult<String>, Option<TimingResult>)>,
 ) -> (ErrorCode, String) {
     match result {
-        Ok((reply, _meta)) => match reply {
+        Ok((reply, _timing)) => match reply {
             RequestResult::Reply(body) => (ErrorCode::Success {}, body),
             RequestResult::Failed(err) => {
                 let code = ErrorCode::from(err);

@@ -27,7 +27,7 @@ impl From<VdrError> for ErrorCode {
             VdrErrorKind::Connection => ErrorCode::Connection {
                 message: err.to_string(),
             },
-            VdrErrorKind::FileSystem => ErrorCode::FileSystem {
+            VdrErrorKind::FileSystem(_) => ErrorCode::FileSystem {
                 message: err.to_string(),
             },
             VdrErrorKind::Input => ErrorCode::Input {

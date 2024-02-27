@@ -9,10 +9,10 @@ import Foundation
 // might be in a separate module, or it might be compiled inline into
 // this module. This is a bit of light hackery to work with both.
 #if canImport(indy_vdr_uniffiFFI)
-    import indy_vdr_uniffiFFI
+import indy_vdr_uniffiFFI
 #endif
 
-private extension RustBuffer {
+fileprivate extension RustBuffer {
     // Allocate a new buffer, copying the contents of a `UInt8` array.
     init(bytes: [UInt8]) {
         let rbuf = bytes.withUnsafeBufferPointer { ptr in
@@ -32,7 +32,7 @@ private extension RustBuffer {
     }
 }
 
-private extension ForeignBytes {
+fileprivate extension ForeignBytes {
     init(bufferPointer: UnsafeBufferPointer<UInt8>) {
         self.init(len: Int32(bufferPointer.count), data: bufferPointer.baseAddress)
     }
@@ -45,7 +45,7 @@ private extension ForeignBytes {
 // Helper classes/extensions that don't change.
 // Someday, this will be in a library of its own.
 
-private extension Data {
+fileprivate extension Data {
     init(rustBuffer: RustBuffer) {
         // TODO: This copies the buffer. Can we read directly from a
         // Rust buffer?
@@ -67,15 +67,15 @@ private extension Data {
 //
 // Instead, the read() method and these helper functions input a tuple of data
 
-private func createReader(data: Data) -> (data: Data, offset: Data.Index) {
+fileprivate func createReader(data: Data) -> (data: Data, offset: Data.Index) {
     (data: data, offset: 0)
 }
 
 // Reads an integer at the current offset, in big-endian order, and advances
 // the offset on success. Throws if reading the integer would move the
 // offset past the end of the buffer.
-private func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offset: Data.Index)) throws -> T {
-    let range = reader.offset ..< reader.offset + MemoryLayout<T>.size
+fileprivate func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offset: Data.Index)) throws -> T {
+    let range = reader.offset..<reader.offset + MemoryLayout<T>.size
     guard reader.data.count >= range.upperBound else {
         throw UniffiInternalError.bufferOverflow
     }
@@ -85,38 +85,38 @@ private func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offset: 
         return value as! T
     }
     var value: T = 0
-    let _ = withUnsafeMutableBytes(of: &value) { reader.data.copyBytes(to: $0, from: range) }
+    let _ = withUnsafeMutableBytes(of: &value, { reader.data.copyBytes(to: $0, from: range)})
     reader.offset = range.upperBound
     return value.bigEndian
 }
 
 // Reads an arbitrary number of bytes, to be used to read
 // raw bytes, this is useful when lifting strings
-private func readBytes(_ reader: inout (data: Data, offset: Data.Index), count: Int) throws -> [UInt8] {
-    let range = reader.offset ..< (reader.offset + count)
+fileprivate func readBytes(_ reader: inout (data: Data, offset: Data.Index), count: Int) throws -> Array<UInt8> {
+    let range = reader.offset..<(reader.offset+count)
     guard reader.data.count >= range.upperBound else {
         throw UniffiInternalError.bufferOverflow
     }
     var value = [UInt8](repeating: 0, count: count)
-    value.withUnsafeMutableBufferPointer { buffer in
+    value.withUnsafeMutableBufferPointer({ buffer in
         reader.data.copyBytes(to: buffer, from: range)
-    }
+    })
     reader.offset = range.upperBound
     return value
 }
 
 // Reads a float at the current offset.
-private func readFloat(_ reader: inout (data: Data, offset: Data.Index)) throws -> Float {
-    return try Float(bitPattern: readInt(&reader))
+fileprivate func readFloat(_ reader: inout (data: Data, offset: Data.Index)) throws -> Float {
+    return Float(bitPattern: try readInt(&reader))
 }
 
 // Reads a float at the current offset.
-private func readDouble(_ reader: inout (data: Data, offset: Data.Index)) throws -> Double {
-    return try Double(bitPattern: readInt(&reader))
+fileprivate func readDouble(_ reader: inout (data: Data, offset: Data.Index)) throws -> Double {
+    return Double(bitPattern: try readInt(&reader))
 }
 
 // Indicates if the offset has reached the end of the buffer.
-private func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Bool {
+fileprivate func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Bool {
     return reader.offset < reader.data.count
 }
 
@@ -124,11 +124,11 @@ private func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Bool {
 // struct, but we use standalone functions instead in order to make external
 // types work.  See the above discussion on Readers for details.
 
-private func createWriter() -> [UInt8] {
+fileprivate func createWriter() -> [UInt8] {
     return []
 }
 
-private func writeBytes<S>(_ writer: inout [UInt8], _ byteArr: S) where S: Sequence, S.Element == UInt8 {
+fileprivate func writeBytes<S>(_ writer: inout [UInt8], _ byteArr: S) where S: Sequence, S.Element == UInt8 {
     writer.append(contentsOf: byteArr)
 }
 
@@ -136,22 +136,22 @@ private func writeBytes<S>(_ writer: inout [UInt8], _ byteArr: S) where S: Seque
 //
 // Warning: make sure what you are trying to write
 // is in the correct type!
-private func writeInt<T: FixedWidthInteger>(_ writer: inout [UInt8], _ value: T) {
+fileprivate func writeInt<T: FixedWidthInteger>(_ writer: inout [UInt8], _ value: T) {
     var value = value.bigEndian
     withUnsafeBytes(of: &value) { writer.append(contentsOf: $0) }
 }
 
-private func writeFloat(_ writer: inout [UInt8], _ value: Float) {
+fileprivate func writeFloat(_ writer: inout [UInt8], _ value: Float) {
     writeInt(&writer, value.bitPattern)
 }
 
-private func writeDouble(_ writer: inout [UInt8], _ value: Double) {
+fileprivate func writeDouble(_ writer: inout [UInt8], _ value: Double) {
     writeInt(&writer, value.bitPattern)
 }
 
 // Protocol for types that transfer other types across the FFI. This is
 // analogous go the Rust trait of the same name.
-private protocol FfiConverter {
+fileprivate protocol FfiConverter {
     associatedtype FfiType
     associatedtype SwiftType
 
@@ -162,7 +162,7 @@ private protocol FfiConverter {
 }
 
 // Types conforming to `Primitive` pass themselves directly over the FFI.
-private protocol FfiConverterPrimitive: FfiConverter where FfiType == SwiftType {}
+fileprivate protocol FfiConverterPrimitive: FfiConverter where FfiType == SwiftType { }
 
 extension FfiConverterPrimitive {
     public static func lift(_ value: FfiType) throws -> SwiftType {
@@ -176,7 +176,7 @@ extension FfiConverterPrimitive {
 
 // Types conforming to `FfiConverterRustBuffer` lift and lower into a `RustBuffer`.
 // Used for complex types where it's hard to write a custom lift/lower.
-private protocol FfiConverterRustBuffer: FfiConverter where FfiType == RustBuffer {}
+fileprivate protocol FfiConverterRustBuffer: FfiConverter where FfiType == RustBuffer {}
 
 extension FfiConverterRustBuffer {
     public static func lift(_ buf: RustBuffer) throws -> SwiftType {
@@ -190,15 +190,14 @@ extension FfiConverterRustBuffer {
     }
 
     public static func lower(_ value: SwiftType) -> RustBuffer {
-        var writer = createWriter()
-        write(value, into: &writer)
-        return RustBuffer(bytes: writer)
+          var writer = createWriter()
+          write(value, into: &writer)
+          return RustBuffer(bytes: writer)
     }
 }
-
 // An error type for FFI errors. These errors occur at the UniFFI level, not
 // the library level.
-private enum UniffiInternalError: LocalizedError {
+fileprivate enum UniffiInternalError: LocalizedError {
     case bufferOverflow
     case incompleteData
     case unexpectedOptionalTag
@@ -224,16 +223,16 @@ private enum UniffiInternalError: LocalizedError {
     }
 }
 
-private let CALL_SUCCESS: Int8 = 0
-private let CALL_ERROR: Int8 = 1
-private let CALL_PANIC: Int8 = 2
-private let CALL_CANCELLED: Int8 = 3
+fileprivate let CALL_SUCCESS: Int8 = 0
+fileprivate let CALL_ERROR: Int8 = 1
+fileprivate let CALL_PANIC: Int8 = 2
+fileprivate let CALL_CANCELLED: Int8 = 3
 
-private extension RustCallStatus {
+fileprivate extension RustCallStatus {
     init() {
         self.init(
             code: CALL_SUCCESS,
-            errorBuf: RustBuffer(
+            errorBuf: RustBuffer.init(
                 capacity: 0,
                 len: 0,
                 data: nil
@@ -248,8 +247,7 @@ private func rustCall<T>(_ callback: (UnsafeMutablePointer<RustCallStatus>) -> T
 
 private func rustCallWithError<T>(
     _ errorHandler: @escaping (RustBuffer) throws -> Error,
-    _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T
-) throws -> T {
+    _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
     try makeRustCall(callback, errorHandler: errorHandler)
 }
 
@@ -258,7 +256,7 @@ private func makeRustCall<T>(
     errorHandler: ((RustBuffer) throws -> Error)?
 ) throws -> T {
     uniffiEnsureInitialized()
-    var callStatus = RustCallStatus()
+    var callStatus = RustCallStatus.init()
     let returnedVal = callback(&callStatus)
     try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: errorHandler)
     return returnedVal
@@ -269,39 +267,40 @@ private func uniffiCheckCallStatus(
     errorHandler: ((RustBuffer) throws -> Error)?
 ) throws {
     switch callStatus.code {
-    case CALL_SUCCESS:
-        return
+        case CALL_SUCCESS:
+            return
 
-    case CALL_ERROR:
-        if let errorHandler = errorHandler {
-            throw try errorHandler(callStatus.errorBuf)
-        } else {
-            callStatus.errorBuf.deallocate()
-            throw UniffiInternalError.unexpectedRustCallError
-        }
+        case CALL_ERROR:
+            if let errorHandler = errorHandler {
+                throw try errorHandler(callStatus.errorBuf)
+            } else {
+                callStatus.errorBuf.deallocate()
+                throw UniffiInternalError.unexpectedRustCallError
+            }
 
-    case CALL_PANIC:
-        // When the rust code sees a panic, it tries to construct a RustBuffer
-        // with the message.  But if that code panics, then it just sends back
-        // an empty buffer.
-        if callStatus.errorBuf.len > 0 {
-            throw try UniffiInternalError.rustPanic(FfiConverterString.lift(callStatus.errorBuf))
-        } else {
-            callStatus.errorBuf.deallocate()
-            throw UniffiInternalError.rustPanic("Rust panic")
-        }
+        case CALL_PANIC:
+            // When the rust code sees a panic, it tries to construct a RustBuffer
+            // with the message.  But if that code panics, then it just sends back
+            // an empty buffer.
+            if callStatus.errorBuf.len > 0 {
+                throw UniffiInternalError.rustPanic(try FfiConverterString.lift(callStatus.errorBuf))
+            } else {
+                callStatus.errorBuf.deallocate()
+                throw UniffiInternalError.rustPanic("Rust panic")
+            }
 
-    case CALL_CANCELLED:
-        throw CancellationError()
+        case CALL_CANCELLED:
+                throw CancellationError()
 
-    default:
-        throw UniffiInternalError.unexpectedRustCallStatusCode
+        default:
+            throw UniffiInternalError.unexpectedRustCallStatusCode
     }
 }
 
 // Public interface members begin here.
 
-private struct FfiConverterInt32: FfiConverterPrimitive {
+
+fileprivate struct FfiConverterInt32: FfiConverterPrimitive {
     typealias FfiType = Int32
     typealias SwiftType = Int32
 
@@ -314,7 +313,7 @@ private struct FfiConverterInt32: FfiConverterPrimitive {
     }
 }
 
-private struct FfiConverterUInt64: FfiConverterPrimitive {
+fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
     typealias FfiType = UInt64
     typealias SwiftType = UInt64
 
@@ -327,7 +326,7 @@ private struct FfiConverterUInt64: FfiConverterPrimitive {
     }
 }
 
-private struct FfiConverterInt64: FfiConverterPrimitive {
+fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
     typealias FfiType = Int64
     typealias SwiftType = Int64
 
@@ -340,7 +339,7 @@ private struct FfiConverterInt64: FfiConverterPrimitive {
     }
 }
 
-private struct FfiConverterFloat: FfiConverterPrimitive {
+fileprivate struct FfiConverterFloat: FfiConverterPrimitive {
     typealias FfiType = Float
     typealias SwiftType = Float
 
@@ -353,7 +352,7 @@ private struct FfiConverterFloat: FfiConverterPrimitive {
     }
 }
 
-private struct FfiConverterBool: FfiConverter {
+fileprivate struct FfiConverterBool : FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
 
@@ -374,7 +373,7 @@ private struct FfiConverterBool: FfiConverter {
     }
 }
 
-private struct FfiConverterString: FfiConverter {
+fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
 
@@ -402,7 +401,7 @@ private struct FfiConverterString: FfiConverter {
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> String {
         let len: Int32 = try readInt(&buf)
-        return try String(bytes: readBytes(&buf, count: Int(len)), encoding: String.Encoding.utf8)!
+        return String(bytes: try readBytes(&buf, count: Int(len)), encoding: String.Encoding.utf8)!
     }
 
     public static func write(_ value: String, into buf: inout [UInt8]) {
@@ -412,12 +411,12 @@ private struct FfiConverterString: FfiConverter {
     }
 }
 
-private struct FfiConverterData: FfiConverterRustBuffer {
+fileprivate struct FfiConverterData: FfiConverterRustBuffer {
     typealias SwiftType = Data
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
         let len: Int32 = try readInt(&buf)
-        return try Data(readBytes(&buf, count: Int(len)))
+        return Data(try readBytes(&buf, count: Int(len)))
     }
 
     public static func write(_ value: Data, into buf: inout [UInt8]) {
@@ -427,31 +426,33 @@ private struct FfiConverterData: FfiConverterRustBuffer {
     }
 }
 
+
 public protocol LedgerProtocol {
-    func buildAcceptanceMechanismsRequest(submitterDid: String, aml: String, version: String, amlContext: String?) throws -> Request
-    func buildAttribRequest(submitterDid: String, targetDid: String, xhash: String?, raw: String?, enc: String?) throws -> Request
-    func buildCredDefRequest(submitterDid: String, credDef: String) throws -> Request
-    func buildCustomRequest(body: String) throws -> Request
-    func buildDisableAllTxnAuthorAgreementsRequest(submitterDid: String) throws -> Request
-    func buildGetAcceptanceMechanismsRequest(submitterDid: String?, timestamp: UInt64?, version: String?) throws -> Request
-    func buildGetAttribRequest(submitterDid: String?, targetDid: String, raw: String?, xhash: String?, enc: String?, seqNo: Int32?, timestamp: UInt64?) throws -> Request
-    func buildGetCredDefRequest(submitterDid: String?, credDefId: String) throws -> Request
-    func buildGetNymRequest(submitterDid: String?, targetDid: String, seqNo: Int32?, timestamp: UInt64?) throws -> Request
-    func buildGetRevocRegDefRequest(submitterDid: String?, revRegId: String) throws -> Request
-    func buildGetRevocRegDeltaRequest(submitterDid: String?, revRegId: String, from: Int64?, to: Int64) throws -> Request
-    func buildGetRevocRegRequest(submitterDid: String?, revRegId: String, timestamp: Int64) throws -> Request
-    func buildGetSchemaRequest(submitterDid: String?, schemaId: String) throws -> Request
-    func buildGetTxnAuthorAgreementRequest(submitterDid: String?, data: String?) throws -> Request
-    func buildGetTxnRequest(submitterDid: String?, ledgerType: LedgerType, seqNo: Int32) throws -> Request
-    func buildGetValidatorInfoRequest(submitterDid: String) throws -> Request
-    func buildNodeRequest(submitterDid: String, targetDid: String, data: String) throws -> Request
-    func buildNymRequest(submitterDid: String, targetDid: String, verkey: String?, alias: String?, role: String?, diddocContent: String?, version: Int32?) throws -> Request
-    func buildPoolConfigRequest(submitterDid: String, writes: Bool, force: Bool) throws -> Request
-    func buildRevocRegDefRequest(submitterDid: String, revRegDef: String) throws -> Request
-    func buildRevocRegEntryRequest(submitterDid: String, revRegDefId: String, entry: String) throws -> Request
-    func buildSchemaRequest(submitterDid: String, schema: String) throws -> Request
-    func buildTxnAuthorAgreementRequest(submitterDid: String, text: String?, version: String, ratificationTs: UInt64?, retirementTs: UInt64?) throws -> Request
-    func prepareTxnAuthorAgreementAcceptance(text: String?, version: String?, taaDigest: String?, mechanism: String, time: UInt64) throws -> String
+    func buildAcceptanceMechanismsRequest(submitterDid: String, aml: String, version: String, amlContext: String?)  throws -> Request
+    func buildAttribRequest(submitterDid: String, targetDid: String, xhash: String?, raw: String?, enc: String?)  throws -> Request
+    func buildCredDefRequest(submitterDid: String, credDef: String)  throws -> Request
+    func buildCustomRequest(body: String)  throws -> Request
+    func buildDisableAllTxnAuthorAgreementsRequest(submitterDid: String)  throws -> Request
+    func buildGetAcceptanceMechanismsRequest(submitterDid: String?, timestamp: UInt64?, version: String?)  throws -> Request
+    func buildGetAttribRequest(submitterDid: String?, targetDid: String, raw: String?, xhash: String?, enc: String?, seqNo: Int32?, timestamp: UInt64?)  throws -> Request
+    func buildGetCredDefRequest(submitterDid: String?, credDefId: String)  throws -> Request
+    func buildGetNymRequest(submitterDid: String?, targetDid: String, seqNo: Int32?, timestamp: UInt64?)  throws -> Request
+    func buildGetRevocRegDefRequest(submitterDid: String?, revRegId: String)  throws -> Request
+    func buildGetRevocRegDeltaRequest(submitterDid: String?, revRegId: String, from: Int64?, to: Int64)  throws -> Request
+    func buildGetRevocRegRequest(submitterDid: String?, revRegId: String, timestamp: Int64)  throws -> Request
+    func buildGetSchemaRequest(submitterDid: String?, schemaId: String)  throws -> Request
+    func buildGetTxnAuthorAgreementRequest(submitterDid: String?, data: String?)  throws -> Request
+    func buildGetTxnRequest(submitterDid: String?, ledgerType: LedgerType, seqNo: Int32)  throws -> Request
+    func buildGetValidatorInfoRequest(submitterDid: String)  throws -> Request
+    func buildNodeRequest(submitterDid: String, targetDid: String, data: String)  throws -> Request
+    func buildNymRequest(submitterDid: String, targetDid: String, verkey: String?, alias: String?, role: String?, diddocContent: String?, version: Int32?)  throws -> Request
+    func buildPoolConfigRequest(submitterDid: String, writes: Bool, force: Bool)  throws -> Request
+    func buildRevocRegDefRequest(submitterDid: String, revRegDef: String)  throws -> Request
+    func buildRevocRegEntryRequest(submitterDid: String, revRegDefId: String, entry: String)  throws -> Request
+    func buildSchemaRequest(submitterDid: String, schema: String)  throws -> Request
+    func buildTxnAuthorAgreementRequest(submitterDid: String, text: String?, version: String, ratificationTs: UInt64?, retirementTs: UInt64?)  throws -> Request
+    func prepareTxnAuthorAgreementAcceptance(text: String?, version: String?, taaDigest: String?, mechanism: String, time: UInt64)  throws -> String
+    
 }
 
 public class Ledger: LedgerProtocol {
@@ -463,282 +464,334 @@ public class Ledger: LedgerProtocol {
     required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
-
-    public convenience init() {
-        self.init(unsafeFromRawPointer: try! rustCall {
-            uniffi_indy_vdr_uniffi_fn_constructor_ledger_new($0)
-        })
+    public convenience init()  {
+        self.init(unsafeFromRawPointer: try! rustCall() {
+    uniffi_indy_vdr_uniffi_fn_constructor_ledger_new($0)
+})
     }
 
     deinit {
         try! rustCall { uniffi_indy_vdr_uniffi_fn_free_ledger(pointer, $0) }
     }
 
+    
+
+    
+    
+
     public func buildAcceptanceMechanismsRequest(submitterDid: String, aml: String, version: String, amlContext: String?) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_acceptance_mechanisms_request(self.pointer,
-                                                                                            FfiConverterString.lower(submitterDid),
-                                                                                            FfiConverterString.lower(aml),
-                                                                                            FfiConverterString.lower(version),
-                                                                                            FfiConverterOptionString.lower(amlContext), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_acceptance_mechanisms_request(self.pointer, 
+        FfiConverterString.lower(submitterDid),
+        FfiConverterString.lower(aml),
+        FfiConverterString.lower(version),
+        FfiConverterOptionString.lower(amlContext),$0
+    )
+}
         )
     }
 
     public func buildAttribRequest(submitterDid: String, targetDid: String, xhash: String?, raw: String?, enc: String?) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_attrib_request(self.pointer,
-                                                                             FfiConverterString.lower(submitterDid),
-                                                                             FfiConverterString.lower(targetDid),
-                                                                             FfiConverterOptionString.lower(xhash),
-                                                                             FfiConverterOptionString.lower(raw),
-                                                                             FfiConverterOptionString.lower(enc), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_attrib_request(self.pointer, 
+        FfiConverterString.lower(submitterDid),
+        FfiConverterString.lower(targetDid),
+        FfiConverterOptionString.lower(xhash),
+        FfiConverterOptionString.lower(raw),
+        FfiConverterOptionString.lower(enc),$0
+    )
+}
         )
     }
 
     public func buildCredDefRequest(submitterDid: String, credDef: String) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_cred_def_request(self.pointer,
-                                                                               FfiConverterString.lower(submitterDid),
-                                                                               FfiConverterString.lower(credDef), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_cred_def_request(self.pointer, 
+        FfiConverterString.lower(submitterDid),
+        FfiConverterString.lower(credDef),$0
+    )
+}
         )
     }
 
     public func buildCustomRequest(body: String) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_custom_request(self.pointer,
-                                                                             FfiConverterString.lower(body), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_custom_request(self.pointer, 
+        FfiConverterString.lower(body),$0
+    )
+}
         )
     }
 
     public func buildDisableAllTxnAuthorAgreementsRequest(submitterDid: String) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_disable_all_txn_author_agreements_request(self.pointer,
-                                                                                                        FfiConverterString.lower(submitterDid), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_disable_all_txn_author_agreements_request(self.pointer, 
+        FfiConverterString.lower(submitterDid),$0
+    )
+}
         )
     }
 
     public func buildGetAcceptanceMechanismsRequest(submitterDid: String?, timestamp: UInt64?, version: String?) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_acceptance_mechanisms_request(self.pointer,
-                                                                                                FfiConverterOptionString.lower(submitterDid),
-                                                                                                FfiConverterOptionUInt64.lower(timestamp),
-                                                                                                FfiConverterOptionString.lower(version), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_acceptance_mechanisms_request(self.pointer, 
+        FfiConverterOptionString.lower(submitterDid),
+        FfiConverterOptionUInt64.lower(timestamp),
+        FfiConverterOptionString.lower(version),$0
+    )
+}
         )
     }
 
     public func buildGetAttribRequest(submitterDid: String?, targetDid: String, raw: String?, xhash: String?, enc: String?, seqNo: Int32?, timestamp: UInt64?) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_attrib_request(self.pointer,
-                                                                                 FfiConverterOptionString.lower(submitterDid),
-                                                                                 FfiConverterString.lower(targetDid),
-                                                                                 FfiConverterOptionString.lower(raw),
-                                                                                 FfiConverterOptionString.lower(xhash),
-                                                                                 FfiConverterOptionString.lower(enc),
-                                                                                 FfiConverterOptionInt32.lower(seqNo),
-                                                                                 FfiConverterOptionUInt64.lower(timestamp), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_attrib_request(self.pointer, 
+        FfiConverterOptionString.lower(submitterDid),
+        FfiConverterString.lower(targetDid),
+        FfiConverterOptionString.lower(raw),
+        FfiConverterOptionString.lower(xhash),
+        FfiConverterOptionString.lower(enc),
+        FfiConverterOptionInt32.lower(seqNo),
+        FfiConverterOptionUInt64.lower(timestamp),$0
+    )
+}
         )
     }
 
     public func buildGetCredDefRequest(submitterDid: String?, credDefId: String) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_cred_def_request(self.pointer,
-                                                                                   FfiConverterOptionString.lower(submitterDid),
-                                                                                   FfiConverterString.lower(credDefId), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_cred_def_request(self.pointer, 
+        FfiConverterOptionString.lower(submitterDid),
+        FfiConverterString.lower(credDefId),$0
+    )
+}
         )
     }
 
     public func buildGetNymRequest(submitterDid: String?, targetDid: String, seqNo: Int32?, timestamp: UInt64?) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_nym_request(self.pointer,
-                                                                              FfiConverterOptionString.lower(submitterDid),
-                                                                              FfiConverterString.lower(targetDid),
-                                                                              FfiConverterOptionInt32.lower(seqNo),
-                                                                              FfiConverterOptionUInt64.lower(timestamp), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_nym_request(self.pointer, 
+        FfiConverterOptionString.lower(submitterDid),
+        FfiConverterString.lower(targetDid),
+        FfiConverterOptionInt32.lower(seqNo),
+        FfiConverterOptionUInt64.lower(timestamp),$0
+    )
+}
         )
     }
 
     public func buildGetRevocRegDefRequest(submitterDid: String?, revRegId: String) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_revoc_reg_def_request(self.pointer,
-                                                                                        FfiConverterOptionString.lower(submitterDid),
-                                                                                        FfiConverterString.lower(revRegId), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_revoc_reg_def_request(self.pointer, 
+        FfiConverterOptionString.lower(submitterDid),
+        FfiConverterString.lower(revRegId),$0
+    )
+}
         )
     }
 
     public func buildGetRevocRegDeltaRequest(submitterDid: String?, revRegId: String, from: Int64?, to: Int64) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_revoc_reg_delta_request(self.pointer,
-                                                                                          FfiConverterOptionString.lower(submitterDid),
-                                                                                          FfiConverterString.lower(revRegId),
-                                                                                          FfiConverterOptionInt64.lower(from),
-                                                                                          FfiConverterInt64.lower(to), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_revoc_reg_delta_request(self.pointer, 
+        FfiConverterOptionString.lower(submitterDid),
+        FfiConverterString.lower(revRegId),
+        FfiConverterOptionInt64.lower(from),
+        FfiConverterInt64.lower(to),$0
+    )
+}
         )
     }
 
     public func buildGetRevocRegRequest(submitterDid: String?, revRegId: String, timestamp: Int64) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_revoc_reg_request(self.pointer,
-                                                                                    FfiConverterOptionString.lower(submitterDid),
-                                                                                    FfiConverterString.lower(revRegId),
-                                                                                    FfiConverterInt64.lower(timestamp), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_revoc_reg_request(self.pointer, 
+        FfiConverterOptionString.lower(submitterDid),
+        FfiConverterString.lower(revRegId),
+        FfiConverterInt64.lower(timestamp),$0
+    )
+}
         )
     }
 
     public func buildGetSchemaRequest(submitterDid: String?, schemaId: String) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_schema_request(self.pointer,
-                                                                                 FfiConverterOptionString.lower(submitterDid),
-                                                                                 FfiConverterString.lower(schemaId), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_schema_request(self.pointer, 
+        FfiConverterOptionString.lower(submitterDid),
+        FfiConverterString.lower(schemaId),$0
+    )
+}
         )
     }
 
     public func buildGetTxnAuthorAgreementRequest(submitterDid: String?, data: String?) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_txn_author_agreement_request(self.pointer,
-                                                                                               FfiConverterOptionString.lower(submitterDid),
-                                                                                               FfiConverterOptionString.lower(data), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_txn_author_agreement_request(self.pointer, 
+        FfiConverterOptionString.lower(submitterDid),
+        FfiConverterOptionString.lower(data),$0
+    )
+}
         )
     }
 
     public func buildGetTxnRequest(submitterDid: String?, ledgerType: LedgerType, seqNo: Int32) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_txn_request(self.pointer,
-                                                                              FfiConverterOptionString.lower(submitterDid),
-                                                                              FfiConverterTypeLedgerType.lower(ledgerType),
-                                                                              FfiConverterInt32.lower(seqNo), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_txn_request(self.pointer, 
+        FfiConverterOptionString.lower(submitterDid),
+        FfiConverterTypeLedgerType.lower(ledgerType),
+        FfiConverterInt32.lower(seqNo),$0
+    )
+}
         )
     }
 
     public func buildGetValidatorInfoRequest(submitterDid: String) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_validator_info_request(self.pointer,
-                                                                                         FfiConverterString.lower(submitterDid), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_get_validator_info_request(self.pointer, 
+        FfiConverterString.lower(submitterDid),$0
+    )
+}
         )
     }
 
     public func buildNodeRequest(submitterDid: String, targetDid: String, data: String) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_node_request(self.pointer,
-                                                                           FfiConverterString.lower(submitterDid),
-                                                                           FfiConverterString.lower(targetDid),
-                                                                           FfiConverterString.lower(data), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_node_request(self.pointer, 
+        FfiConverterString.lower(submitterDid),
+        FfiConverterString.lower(targetDid),
+        FfiConverterString.lower(data),$0
+    )
+}
         )
     }
 
     public func buildNymRequest(submitterDid: String, targetDid: String, verkey: String?, alias: String?, role: String?, diddocContent: String?, version: Int32?) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_nym_request(self.pointer,
-                                                                          FfiConverterString.lower(submitterDid),
-                                                                          FfiConverterString.lower(targetDid),
-                                                                          FfiConverterOptionString.lower(verkey),
-                                                                          FfiConverterOptionString.lower(alias),
-                                                                          FfiConverterOptionString.lower(role),
-                                                                          FfiConverterOptionString.lower(diddocContent),
-                                                                          FfiConverterOptionInt32.lower(version), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_nym_request(self.pointer, 
+        FfiConverterString.lower(submitterDid),
+        FfiConverterString.lower(targetDid),
+        FfiConverterOptionString.lower(verkey),
+        FfiConverterOptionString.lower(alias),
+        FfiConverterOptionString.lower(role),
+        FfiConverterOptionString.lower(diddocContent),
+        FfiConverterOptionInt32.lower(version),$0
+    )
+}
         )
     }
 
     public func buildPoolConfigRequest(submitterDid: String, writes: Bool, force: Bool) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_pool_config_request(self.pointer,
-                                                                                  FfiConverterString.lower(submitterDid),
-                                                                                  FfiConverterBool.lower(writes),
-                                                                                  FfiConverterBool.lower(force), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_pool_config_request(self.pointer, 
+        FfiConverterString.lower(submitterDid),
+        FfiConverterBool.lower(writes),
+        FfiConverterBool.lower(force),$0
+    )
+}
         )
     }
 
     public func buildRevocRegDefRequest(submitterDid: String, revRegDef: String) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_revoc_reg_def_request(self.pointer,
-                                                                                    FfiConverterString.lower(submitterDid),
-                                                                                    FfiConverterString.lower(revRegDef), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_revoc_reg_def_request(self.pointer, 
+        FfiConverterString.lower(submitterDid),
+        FfiConverterString.lower(revRegDef),$0
+    )
+}
         )
     }
 
     public func buildRevocRegEntryRequest(submitterDid: String, revRegDefId: String, entry: String) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_revoc_reg_entry_request(self.pointer,
-                                                                                      FfiConverterString.lower(submitterDid),
-                                                                                      FfiConverterString.lower(revRegDefId),
-                                                                                      FfiConverterString.lower(entry), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_revoc_reg_entry_request(self.pointer, 
+        FfiConverterString.lower(submitterDid),
+        FfiConverterString.lower(revRegDefId),
+        FfiConverterString.lower(entry),$0
+    )
+}
         )
     }
 
     public func buildSchemaRequest(submitterDid: String, schema: String) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_schema_request(self.pointer,
-                                                                             FfiConverterString.lower(submitterDid),
-                                                                             FfiConverterString.lower(schema), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_schema_request(self.pointer, 
+        FfiConverterString.lower(submitterDid),
+        FfiConverterString.lower(schema),$0
+    )
+}
         )
     }
 
     public func buildTxnAuthorAgreementRequest(submitterDid: String, text: String?, version: String, ratificationTs: UInt64?, retirementTs: UInt64?) throws -> Request {
-        return try FfiConverterTypeRequest.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_build_txn_author_agreement_request(self.pointer,
-                                                                                           FfiConverterString.lower(submitterDid),
-                                                                                           FfiConverterOptionString.lower(text),
-                                                                                           FfiConverterString.lower(version),
-                                                                                           FfiConverterOptionUInt64.lower(ratificationTs),
-                                                                                           FfiConverterOptionUInt64.lower(retirementTs), $0)
-            }
+        return try  FfiConverterTypeRequest.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_build_txn_author_agreement_request(self.pointer, 
+        FfiConverterString.lower(submitterDid),
+        FfiConverterOptionString.lower(text),
+        FfiConverterString.lower(version),
+        FfiConverterOptionUInt64.lower(ratificationTs),
+        FfiConverterOptionUInt64.lower(retirementTs),$0
+    )
+}
         )
     }
 
     public func prepareTxnAuthorAgreementAcceptance(text: String?, version: String?, taaDigest: String?, mechanism: String, time: UInt64) throws -> String {
-        return try FfiConverterString.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_ledger_prepare_txn_author_agreement_acceptance(self.pointer,
-                                                                                                FfiConverterOptionString.lower(text),
-                                                                                                FfiConverterOptionString.lower(version),
-                                                                                                FfiConverterOptionString.lower(taaDigest),
-                                                                                                FfiConverterString.lower(mechanism),
-                                                                                                FfiConverterUInt64.lower(time), $0)
-            }
+        return try  FfiConverterString.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_ledger_prepare_txn_author_agreement_acceptance(self.pointer, 
+        FfiConverterOptionString.lower(text),
+        FfiConverterOptionString.lower(version),
+        FfiConverterOptionString.lower(taaDigest),
+        FfiConverterString.lower(mechanism),
+        FfiConverterUInt64.lower(time),$0
+    )
+}
         )
     }
 }
@@ -752,7 +805,7 @@ public struct FfiConverterTypeLedger: FfiConverter {
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
         let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if ptr == nil {
+        if (ptr == nil) {
             throw UniffiInternalError.unexpectedNullPointer
         }
         return try lift(ptr!)
@@ -773,6 +826,7 @@ public struct FfiConverterTypeLedger: FfiConverter {
     }
 }
 
+
 public func FfiConverterTypeLedger_lift(_ pointer: UnsafeMutableRawPointer) throws -> Ledger {
     return try FfiConverterTypeLedger.lift(pointer)
 }
@@ -781,12 +835,14 @@ public func FfiConverterTypeLedger_lower(_ value: Ledger) -> UnsafeMutableRawPoi
     return FfiConverterTypeLedger.lower(value)
 }
 
+
 public protocol PoolProtocol {
     func close() async throws
     func getStatus() async throws -> String
     func getTransactions() async throws -> String
     func submitAction(request: Request, nodeAliases: [String]?, timeout: Int64?) async throws -> String
     func submitRequest(request: Request) async throws -> String
+    
 }
 
 public class Pool: PoolProtocol {
@@ -803,8 +859,13 @@ public class Pool: PoolProtocol {
         try! rustCall { uniffi_indy_vdr_uniffi_fn_free_pool(pointer, $0) }
     }
 
+    
+
+    
+    
+
     public func close() async throws {
-        return try await uniffiRustCallAsync(
+        return try  await uniffiRustCallAsync(
             rustFutureFunc: {
                 uniffi_indy_vdr_uniffi_fn_method_pool_close(
                     self.pointer
@@ -818,8 +879,10 @@ public class Pool: PoolProtocol {
         )
     }
 
+    
+
     public func getStatus() async throws -> String {
-        return try await uniffiRustCallAsync(
+        return try  await uniffiRustCallAsync(
             rustFutureFunc: {
                 uniffi_indy_vdr_uniffi_fn_method_pool_get_status(
                     self.pointer
@@ -833,8 +896,10 @@ public class Pool: PoolProtocol {
         )
     }
 
+    
+
     public func getTransactions() async throws -> String {
-        return try await uniffiRustCallAsync(
+        return try  await uniffiRustCallAsync(
             rustFutureFunc: {
                 uniffi_indy_vdr_uniffi_fn_method_pool_get_transactions(
                     self.pointer
@@ -848,8 +913,10 @@ public class Pool: PoolProtocol {
         )
     }
 
+    
+
     public func submitAction(request: Request, nodeAliases: [String]?, timeout: Int64?) async throws -> String {
-        return try await uniffiRustCallAsync(
+        return try  await uniffiRustCallAsync(
             rustFutureFunc: {
                 uniffi_indy_vdr_uniffi_fn_method_pool_submit_action(
                     self.pointer,
@@ -866,8 +933,10 @@ public class Pool: PoolProtocol {
         )
     }
 
+    
+
     public func submitRequest(request: Request) async throws -> String {
-        return try await uniffiRustCallAsync(
+        return try  await uniffiRustCallAsync(
             rustFutureFunc: {
                 uniffi_indy_vdr_uniffi_fn_method_pool_submit_request(
                     self.pointer,
@@ -881,6 +950,8 @@ public class Pool: PoolProtocol {
             errorHandler: FfiConverterTypeErrorCode.lift
         )
     }
+
+    
 }
 
 public struct FfiConverterTypePool: FfiConverter {
@@ -892,7 +963,7 @@ public struct FfiConverterTypePool: FfiConverter {
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
         let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if ptr == nil {
+        if (ptr == nil) {
             throw UniffiInternalError.unexpectedNullPointer
         }
         return try lift(ptr!)
@@ -913,6 +984,7 @@ public struct FfiConverterTypePool: FfiConverter {
     }
 }
 
+
 public func FfiConverterTypePool_lift(_ pointer: UnsafeMutableRawPointer) throws -> Pool {
     return try FfiConverterTypePool.lift(pointer)
 }
@@ -921,13 +993,15 @@ public func FfiConverterTypePool_lower(_ value: Pool) -> UnsafeMutableRawPointer
     return FfiConverterTypePool.lower(value)
 }
 
+
 public protocol RequestProtocol {
-    func body() throws -> String
-    func setEndorser(endorser: String) throws
-    func setMultiSignature(identifier: String, signature: Data) throws
-    func setSignature(signature: Data) throws
-    func setTxnAuthorAgreementAcceptance(acceptance: String) throws
-    func signatureInput() throws -> String
+    func body()  throws -> String
+    func setEndorser(endorser: String)  throws
+    func setMultiSignature(identifier: String, signature: Data)  throws
+    func setSignature(signature: Data)  throws
+    func setTxnAuthorAgreementAcceptance(acceptance: String)  throws
+    func signatureInput()  throws -> String
+    
 }
 
 public class Request: RequestProtocol {
@@ -944,52 +1018,65 @@ public class Request: RequestProtocol {
         try! rustCall { uniffi_indy_vdr_uniffi_fn_free_request(pointer, $0) }
     }
 
+    
+
+    
+    
+
     public func body() throws -> String {
-        return try FfiConverterString.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_request_body(self.pointer, $0)
-            }
+        return try  FfiConverterString.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_request_body(self.pointer, $0
+    )
+}
         )
     }
 
     public func setEndorser(endorser: String) throws {
-        try
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_request_set_endorser(self.pointer,
-                                                                      FfiConverterString.lower(endorser), $0)
-            }
+        try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_request_set_endorser(self.pointer, 
+        FfiConverterString.lower(endorser),$0
+    )
+}
     }
 
     public func setMultiSignature(identifier: String, signature: Data) throws {
-        try
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_request_set_multi_signature(self.pointer,
-                                                                             FfiConverterString.lower(identifier),
-                                                                             FfiConverterData.lower(signature), $0)
-            }
+        try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_request_set_multi_signature(self.pointer, 
+        FfiConverterString.lower(identifier),
+        FfiConverterData.lower(signature),$0
+    )
+}
     }
 
     public func setSignature(signature: Data) throws {
-        try
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_request_set_signature(self.pointer,
-                                                                       FfiConverterData.lower(signature), $0)
-            }
+        try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_request_set_signature(self.pointer, 
+        FfiConverterData.lower(signature),$0
+    )
+}
     }
 
     public func setTxnAuthorAgreementAcceptance(acceptance: String) throws {
-        try
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_request_set_txn_author_agreement_acceptance(self.pointer,
-                                                                                             FfiConverterString.lower(acceptance), $0)
-            }
+        try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_request_set_txn_author_agreement_acceptance(self.pointer, 
+        FfiConverterString.lower(acceptance),$0
+    )
+}
     }
 
     public func signatureInput() throws -> String {
-        return try FfiConverterString.lift(
-            rustCallWithError(FfiConverterTypeErrorCode.lift) {
-                uniffi_indy_vdr_uniffi_fn_method_request_signature_input(self.pointer, $0)
-            }
+        return try  FfiConverterString.lift(
+            try 
+    rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_method_request_signature_input(self.pointer, $0
+    )
+}
         )
     }
 }
@@ -1003,7 +1090,7 @@ public struct FfiConverterTypeRequest: FfiConverter {
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
         let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if ptr == nil {
+        if (ptr == nil) {
             throw UniffiInternalError.unexpectedNullPointer
         }
         return try lift(ptr!)
@@ -1024,6 +1111,7 @@ public struct FfiConverterTypeRequest: FfiConverter {
     }
 }
 
+
 public func FfiConverterTypeRequest_lift(_ pointer: UnsafeMutableRawPointer) throws -> Request {
     return try FfiConverterTypeRequest.lift(pointer)
 }
@@ -1033,6 +1121,9 @@ public func FfiConverterTypeRequest_lower(_ value: Request) -> UnsafeMutableRawP
 }
 
 public enum ErrorCode {
+
+    
+    
     case Config(message: String)
     case Connection(message: String)
     case FileSystem(message: String)
@@ -1052,117 +1143,142 @@ public enum ErrorCode {
     }
 }
 
+
 public struct FfiConverterTypeErrorCode: FfiConverterRustBuffer {
     typealias SwiftType = ErrorCode
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ErrorCode {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-        case 1: return try .Config(
-                message: FfiConverterString.read(from: &buf)
+
+        
+
+        
+        case 1: return .Config(
+            message: try FfiConverterString.read(from: &buf)
             )
-        case 2: return try .Connection(
-                message: FfiConverterString.read(from: &buf)
+        case 2: return .Connection(
+            message: try FfiConverterString.read(from: &buf)
             )
-        case 3: return try .FileSystem(
-                message: FfiConverterString.read(from: &buf)
+        case 3: return .FileSystem(
+            message: try FfiConverterString.read(from: &buf)
             )
-        case 4: return try .Input(
-                message: FfiConverterString.read(from: &buf)
+        case 4: return .Input(
+            message: try FfiConverterString.read(from: &buf)
             )
-        case 5: return try .Resource(
-                message: FfiConverterString.read(from: &buf)
+        case 5: return .Resource(
+            message: try FfiConverterString.read(from: &buf)
             )
-        case 6: return try .Unavailable(
-                message: FfiConverterString.read(from: &buf)
+        case 6: return .Unavailable(
+            message: try FfiConverterString.read(from: &buf)
             )
-        case 7: return try .Unexpected(
-                message: FfiConverterString.read(from: &buf)
+        case 7: return .Unexpected(
+            message: try FfiConverterString.read(from: &buf)
             )
-        case 8: return try .Incompatible(
-                message: FfiConverterString.read(from: &buf)
+        case 8: return .Incompatible(
+            message: try FfiConverterString.read(from: &buf)
             )
-        case 9: return try .PoolNoConsensus(
-                message: FfiConverterString.read(from: &buf)
+        case 9: return .PoolNoConsensus(
+            message: try FfiConverterString.read(from: &buf)
             )
-        case 10: return try .PoolRequestFailed(
-                message: FfiConverterString.read(from: &buf)
+        case 10: return .PoolRequestFailed(
+            message: try FfiConverterString.read(from: &buf)
             )
-        case 11: return try .PoolTimeout(
-                message: FfiConverterString.read(from: &buf)
+        case 11: return .PoolTimeout(
+            message: try FfiConverterString.read(from: &buf)
             )
-        case 12: return try .Resolver(
-                message: FfiConverterString.read(from: &buf)
+        case 12: return .Resolver(
+            message: try FfiConverterString.read(from: &buf)
             )
         case 13: return .Success
 
-        default: throw UniffiInternalError.unexpectedEnumCase
+         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: ErrorCode, into buf: inout [UInt8]) {
         switch value {
+
+        
+
+        
+        
         case let .Config(message):
             writeInt(&buf, Int32(1))
             FfiConverterString.write(message, into: &buf)
-
+            
+        
         case let .Connection(message):
             writeInt(&buf, Int32(2))
             FfiConverterString.write(message, into: &buf)
-
+            
+        
         case let .FileSystem(message):
             writeInt(&buf, Int32(3))
             FfiConverterString.write(message, into: &buf)
-
+            
+        
         case let .Input(message):
             writeInt(&buf, Int32(4))
             FfiConverterString.write(message, into: &buf)
-
+            
+        
         case let .Resource(message):
             writeInt(&buf, Int32(5))
             FfiConverterString.write(message, into: &buf)
-
+            
+        
         case let .Unavailable(message):
             writeInt(&buf, Int32(6))
             FfiConverterString.write(message, into: &buf)
-
+            
+        
         case let .Unexpected(message):
             writeInt(&buf, Int32(7))
             FfiConverterString.write(message, into: &buf)
-
+            
+        
         case let .Incompatible(message):
             writeInt(&buf, Int32(8))
             FfiConverterString.write(message, into: &buf)
-
+            
+        
         case let .PoolNoConsensus(message):
             writeInt(&buf, Int32(9))
             FfiConverterString.write(message, into: &buf)
-
+            
+        
         case let .PoolRequestFailed(message):
             writeInt(&buf, Int32(10))
             FfiConverterString.write(message, into: &buf)
-
+            
+        
         case let .PoolTimeout(message):
             writeInt(&buf, Int32(11))
             FfiConverterString.write(message, into: &buf)
-
+            
+        
         case let .Resolver(message):
             writeInt(&buf, Int32(12))
             FfiConverterString.write(message, into: &buf)
-
+            
+        
         case .Success:
             writeInt(&buf, Int32(13))
+        
         }
     }
 }
 
+
 extension ErrorCode: Equatable, Hashable {}
 
-extension ErrorCode: Error {}
+extension ErrorCode: Error { }
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 public enum LedgerType {
+    
     case pool
     case domain
     case config
@@ -1174,29 +1290,36 @@ public struct FfiConverterTypeLedgerType: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LedgerType {
         let variant: Int32 = try readInt(&buf)
         switch variant {
+        
         case 1: return .pool
-
+        
         case 2: return .domain
-
+        
         case 3: return .config
-
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: LedgerType, into buf: inout [UInt8]) {
         switch value {
+        
+        
         case .pool:
             writeInt(&buf, Int32(1))
-
+        
+        
         case .domain:
             writeInt(&buf, Int32(2))
-
+        
+        
         case .config:
             writeInt(&buf, Int32(3))
+        
         }
     }
 }
+
 
 public func FfiConverterTypeLedgerType_lift(_ buf: RustBuffer) throws -> LedgerType {
     return try FfiConverterTypeLedgerType.lift(buf)
@@ -1206,9 +1329,12 @@ public func FfiConverterTypeLedgerType_lower(_ value: LedgerType) -> RustBuffer 
     return FfiConverterTypeLedgerType.lower(value)
 }
 
+
 extension LedgerType: Equatable, Hashable {}
 
-private struct FfiConverterOptionInt32: FfiConverterRustBuffer {
+
+
+fileprivate struct FfiConverterOptionInt32: FfiConverterRustBuffer {
     typealias SwiftType = Int32?
 
     public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
@@ -1229,7 +1355,7 @@ private struct FfiConverterOptionInt32: FfiConverterRustBuffer {
     }
 }
 
-private struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
+fileprivate struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
     typealias SwiftType = UInt64?
 
     public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
@@ -1250,7 +1376,7 @@ private struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
     }
 }
 
-private struct FfiConverterOptionInt64: FfiConverterRustBuffer {
+fileprivate struct FfiConverterOptionInt64: FfiConverterRustBuffer {
     typealias SwiftType = Int64?
 
     public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
@@ -1271,7 +1397,7 @@ private struct FfiConverterOptionInt64: FfiConverterRustBuffer {
     }
 }
 
-private struct FfiConverterOptionString: FfiConverterRustBuffer {
+fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
     public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
@@ -1292,7 +1418,7 @@ private struct FfiConverterOptionString: FfiConverterRustBuffer {
     }
 }
 
-private struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
+fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]?
 
     public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
@@ -1313,7 +1439,7 @@ private struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
     }
 }
 
-private struct FfiConverterOptionDictionaryStringFloat: FfiConverterRustBuffer {
+fileprivate struct FfiConverterOptionDictionaryStringFloat: FfiConverterRustBuffer {
     typealias SwiftType = [String: Float]?
 
     public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
@@ -1334,7 +1460,7 @@ private struct FfiConverterOptionDictionaryStringFloat: FfiConverterRustBuffer {
     }
 }
 
-private struct FfiConverterSequenceString: FfiConverterRustBuffer {
+fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
     public static func write(_ value: [String], into buf: inout [UInt8]) {
@@ -1350,13 +1476,13 @@ private struct FfiConverterSequenceString: FfiConverterRustBuffer {
         var seq = [String]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            try seq.append(FfiConverterString.read(from: &buf))
+            seq.append(try FfiConverterString.read(from: &buf))
         }
         return seq
     }
 }
 
-private struct FfiConverterDictionaryStringFloat: FfiConverterRustBuffer {
+fileprivate struct FfiConverterDictionaryStringFloat: FfiConverterRustBuffer {
     public static func write(_ value: [String: Float], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
@@ -1370,7 +1496,7 @@ private struct FfiConverterDictionaryStringFloat: FfiConverterRustBuffer {
         let len: Int32 = try readInt(&buf)
         var dict = [String: Float]()
         dict.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
+        for _ in 0..<len {
             let key = try FfiConverterString.read(from: &buf)
             let value = try FfiConverterFloat.read(from: &buf)
             dict[key] = value
@@ -1378,15 +1504,14 @@ private struct FfiConverterDictionaryStringFloat: FfiConverterRustBuffer {
         return dict
     }
 }
-
 private let UNIFFI_RUST_FUTURE_POLL_READY: Int8 = 0
 private let UNIFFI_RUST_FUTURE_POLL_MAYBE_READY: Int8 = 1
 
-private func uniffiRustCallAsync<F, T>(
+fileprivate func uniffiRustCallAsync<F, T>(
     rustFutureFunc: () -> UnsafeMutableRawPointer,
-    pollFunc: (UnsafeMutableRawPointer, UnsafeMutableRawPointer) -> Void,
+    pollFunc: (UnsafeMutableRawPointer, UnsafeMutableRawPointer) -> (),
     completeFunc: (UnsafeMutableRawPointer, UnsafeMutablePointer<RustCallStatus>) -> F,
-    freeFunc: (UnsafeMutableRawPointer) -> Void,
+    freeFunc: (UnsafeMutableRawPointer) -> (),
     liftFunc: (F) throws -> T,
     errorHandler: ((RustBuffer) throws -> Error)?
 ) async throws -> T {
@@ -1397,7 +1522,7 @@ private func uniffiRustCallAsync<F, T>(
     defer {
         freeFunc(rustFuture)
     }
-    var pollResult: Int8
+    var pollResult: Int8;
     repeat {
         pollResult = await withUnsafeContinuation {
             pollFunc(rustFuture, ContinuationHolder($0).toOpaque())
@@ -1412,13 +1537,13 @@ private func uniffiRustCallAsync<F, T>(
 
 // Callback handlers for an async calls.  These are invoked by Rust when the future is ready.  They
 // lift the return value or error and resume the suspended function.
-private func uniffiFutureContinuationCallback(ptr: UnsafeMutableRawPointer, pollResult: Int8) {
+fileprivate func uniffiFutureContinuationCallback(ptr: UnsafeMutableRawPointer, pollResult: Int8) {
     ContinuationHolder.fromOpaque(ptr).resume(pollResult)
 }
 
 // Wraps UnsafeContinuation in a class so that we can use reference counting when passing it across
 // the FFI
-private class ContinuationHolder {
+fileprivate class ContinuationHolder {
     let continuation: UnsafeContinuation<Int8, Never>
 
     init(_ continuation: UnsafeContinuation<Int8, Never>) {
@@ -1426,7 +1551,7 @@ private class ContinuationHolder {
     }
 
     func resume(_ pollResult: Int8) {
-        continuation.resume(returning: pollResult)
+        self.continuation.resume(returning: pollResult)
     }
 
     func toOpaque() -> UnsafeMutableRawPointer {
@@ -1438,50 +1563,52 @@ private class ContinuationHolder {
     }
 }
 
-private func uniffiInitContinuationCallback() {
+fileprivate func uniffiInitContinuationCallback() {
     ffi_indy_vdr_uniffi_rust_future_continuation_callback_set(uniffiFutureContinuationCallback)
 }
 
 public func openPool(transactionsPath: String?, transactions: String?, nodeWeights: [String: Float]?) throws -> Pool {
-    return try FfiConverterTypePool.lift(
-        rustCallWithError(FfiConverterTypeErrorCode.lift) {
-            uniffi_indy_vdr_uniffi_fn_func_open_pool(
-                FfiConverterOptionString.lower(transactionsPath),
-                FfiConverterOptionString.lower(transactions),
-                FfiConverterOptionDictionaryStringFloat.lower(nodeWeights), $0
-            )
-        }
+    return try  FfiConverterTypePool.lift(
+        try rustCallWithError(FfiConverterTypeErrorCode.lift) {
+    uniffi_indy_vdr_uniffi_fn_func_open_pool(
+        FfiConverterOptionString.lower(transactionsPath),
+        FfiConverterOptionString.lower(transactions),
+        FfiConverterOptionDictionaryStringFloat.lower(nodeWeights),$0)
+}
     )
 }
 
 public func setConfig(config: String) throws {
     try rustCallWithError(FfiConverterTypeErrorCode.lift) {
-        uniffi_indy_vdr_uniffi_fn_func_set_config(
-            FfiConverterString.lower(config), $0
-        )
-    }
+    uniffi_indy_vdr_uniffi_fn_func_set_config(
+        FfiConverterString.lower(config),$0)
 }
+}
+
+
 
 public func setDefaultLogger() throws {
     try rustCallWithError(FfiConverterTypeErrorCode.lift) {
-        uniffi_indy_vdr_uniffi_fn_func_set_default_logger($0)
-    }
+    uniffi_indy_vdr_uniffi_fn_func_set_default_logger($0)
 }
+}
+
+
 
 public func setProtocolVersion(version: Int64) throws {
     try rustCallWithError(FfiConverterTypeErrorCode.lift) {
-        uniffi_indy_vdr_uniffi_fn_func_set_protocol_version(
-            FfiConverterInt64.lower(version), $0
-        )
-    }
+    uniffi_indy_vdr_uniffi_fn_func_set_protocol_version(
+        FfiConverterInt64.lower(version),$0)
 }
+}
+
+
 
 private enum InitializationResult {
     case ok
     case contractVersionMismatch
     case apiChecksumMismatch
 }
-
 // Use a global variables to perform the versioning checks. Swift ensures that
 // the code inside is only computed once.
 private var initializationResult: InitializationResult {
@@ -1492,124 +1619,124 @@ private var initializationResult: InitializationResult {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_func_open_pool() != 28302 {
+    if (uniffi_indy_vdr_uniffi_checksum_func_open_pool() != 28302) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_func_set_config() != 51746 {
+    if (uniffi_indy_vdr_uniffi_checksum_func_set_config() != 51746) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_func_set_default_logger() != 12157 {
+    if (uniffi_indy_vdr_uniffi_checksum_func_set_default_logger() != 12157) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_func_set_protocol_version() != 20917 {
+    if (uniffi_indy_vdr_uniffi_checksum_func_set_protocol_version() != 20917) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_acceptance_mechanisms_request() != 3366 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_acceptance_mechanisms_request() != 3366) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_attrib_request() != 19736 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_attrib_request() != 19736) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_cred_def_request() != 49283 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_cred_def_request() != 49283) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_custom_request() != 23088 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_custom_request() != 23088) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_disable_all_txn_author_agreements_request() != 59199 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_disable_all_txn_author_agreements_request() != 59199) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_acceptance_mechanisms_request() != 13719 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_acceptance_mechanisms_request() != 13719) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_attrib_request() != 61622 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_attrib_request() != 61622) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_cred_def_request() != 54012 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_cred_def_request() != 54012) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_nym_request() != 381 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_nym_request() != 381) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_revoc_reg_def_request() != 11560 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_revoc_reg_def_request() != 11560) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_revoc_reg_delta_request() != 11785 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_revoc_reg_delta_request() != 11785) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_revoc_reg_request() != 52290 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_revoc_reg_request() != 52290) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_schema_request() != 3683 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_schema_request() != 3683) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_txn_author_agreement_request() != 55390 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_txn_author_agreement_request() != 55390) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_txn_request() != 9168 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_txn_request() != 9168) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_validator_info_request() != 31920 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_get_validator_info_request() != 31920) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_node_request() != 17416 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_node_request() != 17416) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_nym_request() != 60857 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_nym_request() != 60857) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_pool_config_request() != 50385 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_pool_config_request() != 50385) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_revoc_reg_def_request() != 53075 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_revoc_reg_def_request() != 53075) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_revoc_reg_entry_request() != 33423 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_revoc_reg_entry_request() != 33423) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_schema_request() != 56142 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_schema_request() != 56142) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_build_txn_author_agreement_request() != 52525 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_build_txn_author_agreement_request() != 52525) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_ledger_prepare_txn_author_agreement_acceptance() != 5480 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_ledger_prepare_txn_author_agreement_acceptance() != 5480) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_pool_close() != 19937 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_pool_close() != 19937) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_pool_get_status() != 36274 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_pool_get_status() != 36274) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_pool_get_transactions() != 23565 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_pool_get_transactions() != 23565) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_pool_submit_action() != 35559 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_pool_submit_action() != 35559) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_pool_submit_request() != 30817 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_pool_submit_request() != 30817) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_request_body() != 38575 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_request_body() != 38575) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_request_set_endorser() != 45243 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_request_set_endorser() != 45243) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_request_set_multi_signature() != 37961 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_request_set_multi_signature() != 37961) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_request_set_signature() != 63648 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_request_set_signature() != 63648) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_request_set_txn_author_agreement_acceptance() != 41143 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_request_set_txn_author_agreement_acceptance() != 41143) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_method_request_signature_input() != 28822 {
+    if (uniffi_indy_vdr_uniffi_checksum_method_request_signature_input() != 28822) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_indy_vdr_uniffi_checksum_constructor_ledger_new() != 57751 {
+    if (uniffi_indy_vdr_uniffi_checksum_constructor_ledger_new() != 57751) {
         return InitializationResult.apiChecksumMismatch
     }
 

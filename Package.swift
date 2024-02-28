@@ -31,8 +31,8 @@ var package = Package(
             path: "swift/Tests/AnoncredsTests"),
         .binaryTarget(
             name: "anoncreds_uniffiFFI",
-            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.1.1-binary/anoncreds_uniffiFFI.xcframework.zip",
-            checksum: "41f8d517d89f57ca28598d936b8743c8e378ef929a58ac00bdbf77dffe1e19b7"),
+            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.2.0-binary/anoncreds_uniffiFFI.xcframework.zip",
+            checksum: "ae96ac8bbef2b9d116b641f38bc3120e1e9666dae7333fe3a982d2a81ac34f2a"),
         .target(
             name: "Askar",
             path: "swift/Sources/Askar"),
@@ -42,8 +42,8 @@ var package = Package(
             path: "swift/Tests/AskarTests"),
         .binaryTarget(
             name: "askar_uniffiFFI",
-            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.1.1-binary/askar_uniffiFFI.xcframework.zip",
-            checksum: "761220bc486d14c371c84c30481c7b07b4e8dc53a0e61cdd3e67efa842bc73ab"),
+            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.2.0-binary/askar_uniffiFFI.xcframework.zip",
+            checksum: "c9e7582cecc2658633db1a26b13f372f69d468e079bd8deef12d8db9b5bb91d9"),
         .target(
             name: "IndyVdr",
             path: "swift/Sources/IndyVdr"),
@@ -56,8 +56,8 @@ var package = Package(
             ]),
         .binaryTarget(
             name: "indy_vdr_uniffiFFI",
-            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.1.1-binary/indy_vdr_uniffiFFI.xcframework.zip",
-            checksum: "076821ffbeb291e2541dbe8eb6186e2583cbadd68cde144c999cf0362fe9a19c")
+            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.2.0-binary/indy_vdr_uniffiFFI.xcframework.zip",
+            checksum: "c158a04e5300bbb4fd20124a11e7823e512d220e869dd13a2ab2e6435bbadc29")
     ]
 )
 

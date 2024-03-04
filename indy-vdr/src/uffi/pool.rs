@@ -61,8 +61,58 @@ fn handle_request_result(
     }
 }
 
+async fn handle_pool_refresh(
+    old_txns: Vec<String>,
+    new_txns: Vec<String>,
+) -> Result<Option<PoolRunner>, ErrorCode> {
+    let mut txns = PoolTransactions::from_json_transactions(old_txns)?;
+    txns.extend_from_json(&new_txns)?;
+    let builder = {
+        let gcfg = read_lock!(POOL_CONFIG)?;
+        PoolBuilder::from(gcfg.clone())
+    };
+    let runner = builder.transactions(txns)?.into_runner()?;
+    Ok(Some(runner))
+}
+
 #[uniffi::export(async_runtime = "tokio")]
 impl Pool {
+    pub async fn refresh(&self) -> Result<(), ErrorCode> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let (tx, rx) = oneshot::channel();
+        read_pool!(self.pool)?.refresh(Box::new(move |result| {
+            match result {
+                Ok((old_txns, new_txns, _timing)) => {
+                    if let Some(new_txns) = new_txns {
+                        let result = rt.block_on(handle_pool_refresh(old_txns, new_txns));
+                        let _ = tx.send(result);
+                    } else {
+                        let _ = tx.send(Ok(None));
+                    }
+                }
+                Err(err) => {
+                    let code = ErrorCode::from(err);
+                    let _ = tx.send(Err(code));
+                }
+            };
+        }))?;
+        let result = rx.await.map_err(|err| ErrorCode::Unexpected {
+            message: format!("Channel error: {}", err),
+        })?;
+        match result {
+            Ok(runner) => {
+                if let Some(runner) = runner {
+                    *self.pool.write().await = Some(runner);
+                }
+                Ok(())
+            }
+            Err(err) => Err(err),
+        }
+    }
+
     pub async fn get_status(&self) -> Result<String, ErrorCode> {
         let (tx, rx) = oneshot::channel();
         read_pool!(self.pool)?.get_status(Box::new(move |result| {

@@ -785,6 +785,7 @@ public protocol PoolProtocol {
     func close() async throws
     func getStatus() async throws -> String
     func getTransactions() async throws -> String
+    func refresh() async throws
     func submitAction(request: Request, nodeAliases: [String]?, timeout: Int64?) async throws -> String
     func submitRequest(request: Request) async throws -> String
 }
@@ -844,6 +845,21 @@ public class Pool: PoolProtocol {
             completeFunc: ffi_indy_vdr_uniffi_rust_future_complete_rust_buffer,
             freeFunc: ffi_indy_vdr_uniffi_rust_future_free_rust_buffer,
             liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeErrorCode.lift
+        )
+    }
+
+    public func refresh() async throws {
+        return try await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_indy_vdr_uniffi_fn_method_pool_refresh(
+                    self.pointer
+                )
+            },
+            pollFunc: ffi_indy_vdr_uniffi_rust_future_poll_void,
+            completeFunc: ffi_indy_vdr_uniffi_rust_future_complete_void,
+            freeFunc: ffi_indy_vdr_uniffi_rust_future_free_void,
+            liftFunc: { $0 },
             errorHandler: FfiConverterTypeErrorCode.lift
         )
     }
@@ -1583,6 +1599,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_indy_vdr_uniffi_checksum_method_pool_get_transactions() != 23565 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_indy_vdr_uniffi_checksum_method_pool_refresh() != 11901 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_indy_vdr_uniffi_checksum_method_pool_submit_action() != 35559 {

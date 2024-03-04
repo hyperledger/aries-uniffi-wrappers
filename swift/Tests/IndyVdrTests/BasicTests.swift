@@ -2,6 +2,7 @@ import XCTest
 @testable import IndyVdr
 
 final class BasicTests: XCTestCase {
+    let printLength = 200
     func testFeatures() async throws {
         guard let genesisUrl = Bundle.module.url(forResource: "genesis_sov_buildernet", withExtension: "txn") else {
             XCTFail("Genesis file not found")
@@ -9,7 +10,10 @@ final class BasicTests: XCTestCase {
         }
 
         let pool = try openPool(transactionsPath: genesisUrl.path, transactions: nil, nodeWeights: nil)
-        print("Status: \(try await pool.getStatus())")
+        print("Status:", try await pool.getStatus())
+
+        try await pool.refresh()
+        print("Status after refresh:", try await pool.getStatus())
 
         let ledger = Ledger()
 
@@ -28,10 +32,10 @@ final class BasicTests: XCTestCase {
         print("Custom request signature input:", sigIn)
 
         req = try ledger.buildGetTxnAuthorAgreementRequest(submitterDid: nil, data: nil)
-        print(try await pool.submitRequest(request: req))
+        print("buildGetTxnAuthorAgreementRequest:", try await pool.submitRequest(request: req).prefix(printLength))
 
         req = try ledger.buildGetAcceptanceMechanismsRequest(submitterDid: nil, timestamp: nil, version: nil)
-        print(try await pool.submitRequest(request: req))
+        print("buildGetAcceptanceMechanismsRequest:", try await pool.submitRequest(request: req).prefix(printLength))
 
         let acceptance = try ledger.prepareTxnAuthorAgreementAcceptance(
             text: "acceptance text",
@@ -46,7 +50,7 @@ final class BasicTests: XCTestCase {
         print("Request with TAA acceptance and endorser:", try req.body())
 
         req = try ledger.buildGetTxnRequest(submitterDid: nil, ledgerType: .domain, seqNo: 1)
-        print(try await pool.submitRequest(request: req))
+        print("buildGetTxnRequest:", try await pool.submitRequest(request: req).prefix(printLength))
 
         req = try ledger.buildGetSchemaRequest(submitterDid: nil, schemaId: "6qnvgJtqwK44D8LFYnV5Yf:2:relationship.dflow:1.0.0")
         print("Get schema request:", try req.body())

@@ -56,8 +56,8 @@ var package = Package(
             ]),
         .binaryTarget(
             name: "indy_vdr_uniffiFFI",
-            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.2.0-binary/indy_vdr_uniffiFFI.xcframework.zip",
-            checksum: "c158a04e5300bbb4fd20124a11e7823e512d220e869dd13a2ab2e6435bbadc29")
+            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.2.1-binary/indy_vdr_uniffiFFI.xcframework.zip",
+            checksum: "fcaf8df60f41a149d1f496e494499f8645f971a68e9c024b0498271756180a4e")
     ]
 )
 

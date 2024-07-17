@@ -155,4 +155,27 @@ final class StoreTests: XCTestCase {
         key = try await session.fetchKey(name: keyName, forUpdate: false)
         XCTAssertNil(key)
     }
+
+    func testMigration() async throws {
+        guard let file = Bundle.module.url(forResource: "indy_wallet_sqlite", withExtension: "db") else {
+            XCTFail("Wallet file not found")
+            return
+        }
+
+        let copyPath = "/tmp/indy_wallet_sqlite_upgrade.db"
+        try FileManager.default.copyItem(atPath: file.path, toPath: copyPath)
+        let key = "GfwU1DC7gEZNs3w41tjBiZYj7BNToDoFEqKY6wZXqs1A"
+        try await storeManager.migrateIndyWallet(specUri: URI_SCHEMA + copyPath,
+                                                 walletName: "walletwallet.0",
+                                                 walletKey: key,
+                                                 kdfLevel: "RAW")
+
+        // Try open the upgraded wallet
+        let upgraded = try await storeManager.open(specUri: URI_SCHEMA + copyPath,
+                                                               keyMethod: "raw",
+                                                               passKey: key,
+                                                               profile: nil)
+        try await upgraded.close()
+        _ = try await storeManager.remove(specUri: URI_SCHEMA + copyPath)
+    }
 }

@@ -197,6 +197,7 @@ impl AskarSession {
                 &name,
                 &key.key,
                 metadata.as_deref(),
+                None,
                 tags.as_deref(),
                 expiry_ms,
             )

@@ -33,6 +33,9 @@ class TestVDR {
 
             println("\tPool Status: ${pool.getStatus()}")
 
+            pool.refresh()
+            println("\tPool Status after refresh: ${pool.getStatus()}")
+
             val ledger = Ledger()
             ffiObjects.add(ledger)
 

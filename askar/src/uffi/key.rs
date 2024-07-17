@@ -132,7 +132,7 @@ impl LocalKeyFactory {
         alg: AskarKeyAlg,
         ephemeral: bool,
     ) -> Result<Arc<AskarLocalKey>, ErrorCode> {
-        let key = LocalKey::generate(alg.into(), ephemeral)?;
+        let key = LocalKey::generate_with_rng(alg.into(), ephemeral)?;
         Ok(Arc::new(AskarLocalKey { key }))
     }
 

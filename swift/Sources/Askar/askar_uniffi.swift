@@ -1795,6 +1795,7 @@ public func FfiConverterTypeAskarStore_lower(_ value: AskarStore) -> UnsafeMutab
 
 public protocol AskarStoreManagerProtocol {
     func generateRawStoreKey(seed: String?) throws -> String
+    func migrateIndyWallet(specUri: String, walletName: String, walletKey: String, kdfLevel: String) async throws
     func open(specUri: String, keyMethod: String?, passKey: String?, profile: String?) async throws -> AskarStore
     func provision(specUri: String, keyMethod: String?, passKey: String?, profile: String?, recreate: Bool) async throws -> AskarStore
     func remove(specUri: String) async throws -> Bool
@@ -1826,6 +1827,25 @@ public class AskarStoreManager: AskarStoreManagerProtocol {
                 uniffi_askar_uniffi_fn_method_askarstoremanager_generate_raw_store_key(self.pointer,
                                                                                        FfiConverterOptionString.lower(seed), $0)
             }
+        )
+    }
+
+    public func migrateIndyWallet(specUri: String, walletName: String, walletKey: String, kdfLevel: String) async throws {
+        return try await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_askar_uniffi_fn_method_askarstoremanager_migrate_indy_wallet(
+                    self.pointer,
+                    FfiConverterString.lower(specUri),
+                    FfiConverterString.lower(walletName),
+                    FfiConverterString.lower(walletKey),
+                    FfiConverterString.lower(kdfLevel)
+                )
+            },
+            pollFunc: ffi_askar_uniffi_rust_future_poll_void,
+            completeFunc: ffi_askar_uniffi_rust_future_complete_void,
+            freeFunc: ffi_askar_uniffi_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeErrorCode.lift
         )
     }
 
@@ -3041,6 +3061,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_askar_uniffi_checksum_method_askarstoremanager_generate_raw_store_key() != 8565 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_askar_uniffi_checksum_method_askarstoremanager_migrate_indy_wallet() != 51575 {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_askar_uniffi_checksum_method_askarstoremanager_open() != 236 {

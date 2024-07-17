@@ -39,7 +39,10 @@ var package = Package(
         .testTarget(
             name: "AskarTests",
             dependencies: ["Askar"],
-            path: "swift/Tests/AskarTests"),
+            path: "swift/Tests/AskarTests",
+            resources: [
+                .copy("resources/indy_wallet_sqlite.db")
+            ]),
         .binaryTarget(
             name: "askar_uniffiFFI",
             url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.2.0-binary/askar_uniffiFFI.xcframework.zip",

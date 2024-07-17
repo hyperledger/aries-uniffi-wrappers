@@ -39,7 +39,8 @@ lipo -create $AARCH64_APPLE_DARWIN_PATH/lib$NAME.a \
              $X86_64_APPLE_DARWIN_PATH/lib$NAME.a \
      -output $OUT_PATH/macos-native/static/lib$NAME.a
 
-cargo install cross --git https://github.com/cross-rs/cross
+# https://github.com/cross-rs/cross/issues/1222
+cargo install cross --git https://github.com/cross-rs/cross --rev 35a1e174
 
 # Build for android targets
 for target in "${android_targets[@]}"; do

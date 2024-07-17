@@ -45,8 +45,8 @@ var package = Package(
             ]),
         .binaryTarget(
             name: "askar_uniffiFFI",
-            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.2.0-binary/askar_uniffiFFI.xcframework.zip",
-            checksum: "c9e7582cecc2658633db1a26b13f372f69d468e079bd8deef12d8db9b5bb91d9"),
+            url: "https://github.com/hyperledger/aries-uniffi-wrappers/releases/download/0.2.2-binary/askar_uniffiFFI.xcframework.zip",
+            checksum: "ec94f384e406600573cb730fe63d57f4a0dbe74074a98e8fd082ab0f382207af"),
         .target(
             name: "IndyVdr",
             path: "swift/Sources/IndyVdr"),

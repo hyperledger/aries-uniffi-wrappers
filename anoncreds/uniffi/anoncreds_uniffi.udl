@@ -22,5 +22,8 @@ interface Schema {};
 interface Verifier {
     constructor();
 };
+interface CredentialConversions {
+    constructor();
+};
 
 namespace anoncreds_uniffi {};

@@ -15,6 +15,12 @@ X86_64_APPLE_DARWIN_PATH="./target/x86_64-apple-darwin/release"
 
 apple_targets=("aarch64-apple-ios" "aarch64-apple-ios-sim" "x86_64-apple-ios" "aarch64-apple-darwin" "x86_64-apple-darwin")
 
+windows_targets=("x86_64-pc-windows-gnu")
+windows_jna=("win32-x86-64")
+
+linux_targets=("x86_64-unknown-linux-gnu")
+linux_jna=("linux-x86-64")
+
 android_targets=("aarch64-linux-android" "armv7-linux-androideabi" "i686-linux-android" "x86_64-linux-android")
 android_jni=("arm64-v8a" "armeabi-v7a" "x86" "x86_64")
 
@@ -25,21 +31,44 @@ for target in "${apple_targets[@]}"; do
   cargo build --release --target $target
 done
 
+
 # Merge mac libraries with lipo
 mkdir -p $OUT_PATH/macos-native/static
-mkdir -p $OUT_PATH/macos-native/dynamic
-
-# dylib for JVM
-lipo -create $AARCH64_APPLE_DARWIN_PATH/lib$NAME.dylib \
-             $X86_64_APPLE_DARWIN_PATH/lib$NAME.dylib \
-     -output $OUT_PATH/macos-native/dynamic/lib$NAME.dylib
+mkdir -p $OUT_PATH/jna/darwin
 
 # .a for Native
 lipo -create $AARCH64_APPLE_DARWIN_PATH/lib$NAME.a \
              $X86_64_APPLE_DARWIN_PATH/lib$NAME.a \
      -output $OUT_PATH/macos-native/static/lib$NAME.a
+     
+# dylib for JVM
+lipo -create $AARCH64_APPLE_DARWIN_PATH/lib$NAME.dylib \
+             $X86_64_APPLE_DARWIN_PATH/lib$NAME.dylib \
+     -output $OUT_PATH/jna/darwin/lib$NAME.dylib  
+
+# Build for JVM windows desktop environments
+for key in "${!windows_targets[@]}"; do
+  target=${windows_targets[$key]}
+  jnaDir=$OUT_PATH/jna/${windows_jna[$key]}
+  mkdir -p $jnaDir
+  echo "Building for $target..."
+  rustup target add $target
+  cargo build --release --target $target
+  cp ./target/$target/release/$NAME.dll $jnaDir/$NAME.dll
+done
 
 cargo install cross --git https://github.com/cross-rs/cross
+
+# Build for JVM linux desktop environments
+for key in "${!linux_targets[@]}"; do
+  target=${linux_targets[$key]}
+  jnaDir=$OUT_PATH/jna/${linux_jna[$key]}
+  mkdir -p $jnaDir
+  echo "Building for $target..."
+  rustup target add $target
+  cross build --release --target $target
+  cp ./target/$target/release/lib$NAME.so $jnaDir/lib$NAME.so
+done
 
 # Build for android targets
 for target in "${android_targets[@]}"; do

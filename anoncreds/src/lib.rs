@@ -8,5 +8,6 @@ use uffi::types::{
     RevocationRegistryDefinitionPrivate, RevocationRegistryDelta, RevocationStatusList, Schema,
 };
 use uffi::verifier::Verifier;
+use uffi::credential_conversions::CredentialConversions;
 
 uniffi::include_scaffolding!("anoncreds_uniffi");

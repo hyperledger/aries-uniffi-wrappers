@@ -39,13 +39,11 @@ val uniffiBindings = anoncredsDir.resolve("out/kmpp-uniffi")
 val jniLibs = uniffiBindings.resolve("jniLibs")
 
 val processBinaries = tasks.register("processBinaries", Copy::class) {
-    val directory = buildDir
-        .resolve("processedResources")
-        .resolve("jvm")
-        .resolve("main")
 
-    from(uniffiBindings.resolve("macos-native").resolve("dynamic"))
-    include("*.dylib")
+    val directory = layout.buildDirectory.file("processedResources").get().asFile.resolve("jvm").resolve("main")
+
+    from(uniffiBindings.resolve("jna"))
+    include("*/*")
     into(directory)
 }
 
@@ -215,7 +213,7 @@ kotlin {
         val jvmMain by getting {
             kotlin.srcDir(uniffiBindings.resolve("jvmMain").resolve("kotlin"))
             dependencies{
-                implementation("net.java.dev.jna:jna:5.13.0")
+                implementation("net.java.dev.jna:jna:5.17.0")
             }
         }
 
